@@ -7,7 +7,7 @@ import java.io.Serializable;
  *
  * This class contains the values for the filter configuration.
  *
- * @see http://hur.st/bloomfilter?n=3&p=1.0E-5
+ * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter calculator</a>
  *
  */
 public class FilterConfig implements Serializable {
@@ -25,6 +25,27 @@ public class FilterConfig implements Serializable {
 	private int numberOfBits;
 	// number of hash functions
 	private int numberOfHashFunctions;
+	
+	/**
+	 * A main method to generate and output the results of different constructor arguments.
+	 * 
+	 * Arguments:
+	 * <ol>
+	 * <li>The number of items to put in the bloom filter</li>
+	 * <li>The probability of a collision expressed as X in 1/X</li>
+	 * </ol>
+	 * 
+	 * Outputs the statistics of the filter configuration.
+	 * 
+	 * @param args the arguments
+	 */
+	public static void main(String[] args)
+	{
+		FilterConfig fc = new FilterConfig( Integer.parseInt(args[0]), Integer.parseInt(args[1]));
+		System.out.println( String.format( "items: %s bits: %s bytes: %s functions: %s p: 1/%s (%s)", 
+				fc.getNumberOfItems(), fc.getNumberOfBits(), fc.getNumberOfBytes(),
+				fc.getNumberOfHashFunctions(), fc.getProbability(), (1.0/fc.getProbability())));
+	}
 
 	/**
 	 * Create a filter configuration with the specified number of bits and

@@ -20,7 +20,11 @@ package org.xenei.bloomfilter;
 import java.util.BitSet;
 
 /**
- * A bloom filter definition.
+ * A prototypical bloom filter definition.
+ * 
+ * This is the information necessary to create a concrete bloom filter given a filter configuration.
+
+ *
  *
  */
 public class ProtoBloomFilter implements BloomFilterI<ProtoBloomFilter> {
@@ -30,17 +34,16 @@ public class ProtoBloomFilter implements BloomFilterI<ProtoBloomFilter> {
 
 	/**
 	 * Constructor
+	 * @param hashes the two longs that were created by the murmur hash function.
 	 */
 	public ProtoBloomFilter(long[] hashes) {
 		this.hashes = hashes;
 	}
 
 	/**
-	 * Return true if this & other = this
-	 * 
-	 * @param other
-	 *            the other bloom filter to match.
-	 * @return true if they match.
+	 * Create a concrete bloom filter from this proto type give nteh filter configuration.
+	 * @param cfg The filter configuration to use.
+	 * @return the Concreate Bloom Filter.
 	 */
 	public final BloomFilter create(FilterConfig cfg) {
 		BitSet set = new BitSet(cfg.getNumberOfBits());

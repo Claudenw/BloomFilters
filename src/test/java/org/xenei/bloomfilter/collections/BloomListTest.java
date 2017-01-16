@@ -29,15 +29,6 @@ public class BloomListTest {
 		ProtoBloomFilter pbf = builder.update(s).build();
 		list.add(pbf, s);
 	}
-	
-	@Test
-	public void x() {
-		FilterConfig filterConfig = new FilterConfig(4,10000);
-		FilterConfig filterConfig2 = new FilterConfig(100,500);
-		System.out.println( filterConfig );
-		System.out.println( filterConfig2 );
-		
-	}
 
 	@Test
 	public void isFullTest() throws IOException {

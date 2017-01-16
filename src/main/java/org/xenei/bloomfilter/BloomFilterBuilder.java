@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * An abstract BloomFilter buider.
+ * A ProtoBloomFilter builder.
+ * 
+ * Concrete implementations of BloomFilter can be built from the ProtoBloomFilter.
  *
- * @param <T>
- *            The type of bloom filter being constructed.
  */
 public class BloomFilterBuilder {
 	private ByteArrayOutputStream baos;
@@ -33,8 +33,6 @@ public class BloomFilterBuilder {
 	/**
 	 * Constructor.
 	 * 
-	 * @param config
-	 *            The filter configuration.
 	 */
 	public BloomFilterBuilder() {
 		baos = new ByteArrayOutputStream();
@@ -43,23 +41,21 @@ public class BloomFilterBuilder {
 	/**
 	 * Build the bloom filter from the current buffers.
 	 * 
-	 * @return The BloomFilter
+	 * @return The ProtoBloomFilter
 	 */
 	public ProtoBloomFilter build() {
-
 		long[] hash = new long[2];
 		ByteBuffer buffer = ByteBuffer.wrap(baos.toByteArray());
 		hash3_x64_128(buffer, 0, buffer.limit(), 0L, hash);
 		baos.reset();
 		return new ProtoBloomFilter(hash);
-
 	}
 
 	/**
-	 * Updates the bitset from the node.
+	 * Add the byte buffer to the filter.
 	 * 
 	 * @param buffer
-	 *            The buffer to add
+	 *            The buffer to add.
 	 */
 	public BloomFilterBuilder update(ByteBuffer buffer) {
 		while (buffer.hasRemaining()) {
@@ -68,20 +64,43 @@ public class BloomFilterBuilder {
 		return this;
 	}
 
+	/**
+	 * Add the byte to the filter.
+	 * 
+	 * @param b
+	 *            The byte to add.
+	 */
 	public BloomFilterBuilder update(byte b) {
 		baos.write(b);
 		return this;
 	}
 
+	/**
+	 * Add the bytes from the string to the filter.
+	 * 
+	 * The bytes are interpreted as UTF-8 chars.
+	 * 
+	 * @param string
+	 *            The string to add.
+	 */
 	public BloomFilterBuilder update(String string) throws IOException {
-		return update(string.getBytes());
+		return update(string.getBytes("UTF-8"));
 	}
 
+	/**
+	 * Add the byte buffer to the filter.
+	 * 
+	 * @param buffer
+	 *            The buffer to add.
+	 */
 	public BloomFilterBuilder update(byte[] buffer) throws IOException {
 		baos.write(buffer);
 		return this;
 	}
 
+	/**************************************
+	 * Methods to perform murmur 128 hash.
+	 **************************************/
 	private long getblock(ByteBuffer key, int offset, int index) {
 		int i_8 = index << 3;
 		int blockOffset = offset + i_8;

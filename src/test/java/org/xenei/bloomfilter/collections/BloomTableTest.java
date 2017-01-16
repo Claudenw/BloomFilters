@@ -63,7 +63,6 @@ public class BloomTableTest {
 		int[] values = { 1, 1, 1, 1, 1 };
 		for (String s : str) {
 			list.put(s);
-			System.out.println(list.getGate());
 		}
 		List<String> lst = null;
 		int idx = 0;
@@ -76,7 +75,6 @@ public class BloomTableTest {
 		assertEquals("Should be none", 0, lst.size());
 
 		list.put("five");
-		System.out.println(list.getGate());
 
 		for (String s : str) {
 			lst = list.getCandidates(s).toList();

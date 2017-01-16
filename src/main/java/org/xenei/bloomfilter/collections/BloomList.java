@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.xenei.bloomfilter.collections;
 
 import java.util.Iterator;
@@ -11,8 +28,17 @@ import org.xenei.bloomfilter.BloomFilter;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
+/**
+ * A bloom list containing items of type T
+ *
+ * @param <T>
+ */
 public class BloomList<T> extends AbstractBloomList<T, BloomFilter> {
 
+	/**
+	 * Create a bloom list.
+	 * @param cfg The filter configuration for the gating filter.
+	 */
 	public BloomList(FilterConfig cfg) {
 		super(cfg);
 	}
@@ -36,6 +62,11 @@ public class BloomList<T> extends AbstractBloomList<T, BloomFilter> {
 		size++;
 	}
 
+	/*
+	 * Adds the item to the closest match if possible.
+	 * 
+	 *  returns true if the item was added, false otherwise.
+	 */
 	private boolean addClosestMatch(SortedSet<DataWrapper<T, BloomFilter>> set, BloomFilter bf, ProtoBloomFilter pbf,
 			T t) {
 
@@ -47,7 +78,6 @@ public class BloomList<T> extends AbstractBloomList<T, BloomFilter> {
 		Iterator<DataWrapper<T, BloomFilter>> iter = set.iterator();
 		while (iter.hasNext() && !logMatch) {
 			DataWrapper<T, BloomFilter> bl = iter.next();
-			System.out.println(bl);
 
 			if (bl.getFilter().getLog() == bf.getLog()) {
 				logMatch = true;

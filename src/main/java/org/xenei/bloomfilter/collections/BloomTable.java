@@ -29,18 +29,29 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
 
 /**
  * A table that contains one or more BloomLists.
+ * 
+ * This table accepts duplicates.
  *
- * @param <T>
+ * @param <T> the data type.
  */
 public abstract class BloomTable<T> {
 	private static final int PAGE_SIZE = 10000;
 	private BloomList<ProtoBloomList<T>> headers;
 	private FilterConfig childConfig;
 
+	/**
+	 * Create a table with the specified item size.
+	 * @param itemSize The number of items expected in each bloom list.
+	 */
 	public BloomTable(int itemSize) {
 		this(PAGE_SIZE, itemSize);
 	}
 
+	/**
+	 * Create a table with the specified page and item size. 
+	 * @param pageSize The number of items that are expected to be inserted into this table.
+	 * @param itemSize the number of items that are expected to be places on each list within the table.
+	 */
 	public BloomTable(int pageSize, int itemSize) {
 		this.childConfig = new FilterConfig(itemSize, pageSize);
 		this.headers = new BloomList<ProtoBloomList<T>>(new FilterConfig(pageSize, pageSize));
@@ -55,14 +66,26 @@ public abstract class BloomTable<T> {
 	 */
 	abstract protected ProtoBloomFilter createProto(T t);
 
+	/**
+	 * Clears ths table.
+	 */
 	public void clear() {
 		headers.clear();
 	}
 
+	/**
+	 * Get the gating bloom filter.  This is the filter defined by the page size and that tracks
+	 * all items places in the table. 
+	 * @return The gating bloom filter.
+	 */
 	public BloomFilter getGate() {
 		return headers.getGate();
 	}
 
+	/**
+	 * Put an item in the table.
+	 * @param t The item to put in the table.
+	 */
 	public void put(T t) {
 		ProtoBloomFilter pbf = createProto(t);
 		ProtoBloomList<T> pbl = new ProtoBloomList<T>(childConfig);
@@ -70,6 +93,11 @@ public abstract class BloomTable<T> {
 		headers.add(pbf, pbl);
 	}
 
+	/**
+	 * Get the iterator of candidates that might match the data item.
+	 * @param t The data item to match.
+	 * @return an iterator of possible matches.
+	 */
 	public ExtendedIterator<T> getCandidates(T t) {
 		final ProtoBloomFilter pbf = createProto(t);
 
