@@ -69,6 +69,7 @@ public class BloomFilterBuilder {
 	 * 
 	 * @param b
 	 *            The byte to add.
+	 * @return this for chaining
 	 */
 	public BloomFilterBuilder update(byte b) {
 		baos.write(b);
@@ -82,6 +83,7 @@ public class BloomFilterBuilder {
 	 * 
 	 * @param string
 	 *            The string to add.
+	 * @return this for chaining
 	 */
 	public BloomFilterBuilder update(String string) throws IOException {
 		return update(string.getBytes("UTF-8"));
@@ -92,6 +94,7 @@ public class BloomFilterBuilder {
 	 * 
 	 * @param buffer
 	 *            The buffer to add.
+	 * @return this for chaining
 	 */
 	public BloomFilterBuilder update(byte[] buffer) throws IOException {
 		baos.write(buffer);
