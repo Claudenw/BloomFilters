@@ -1,7 +1,7 @@
 package org.xenei.bloomfilter.collections;
 
 import org.xenei.bloomfilter.BloomFilter;
-import org.xenei.bloomfilter.BloomFilterBuilder;
+import org.xenei.bloomfilter.ProtoBloomFilterBuilder;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.collections.BloomList;
@@ -10,6 +10,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Function;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -18,11 +19,21 @@ public class BloomListTest {
 
 	private BloomList<String> list;
 	private FilterConfig filterConfig = new FilterConfig(5, 10);
-	private BloomFilterBuilder builder = new BloomFilterBuilder();
+	private ProtoBloomFilterBuilder builder = new ProtoBloomFilterBuilder();
 
+	private static Function<String,ProtoBloomFilter> func = new Function<String,ProtoBloomFilter>()
+			{
+
+				@Override
+				public ProtoBloomFilter apply(String string) {
+					return new ProtoBloomFilterBuilder().build(string);
+				}
+		
+			};
+			
 	@Before
 	public void before() {
-		list = new BloomList<String>(filterConfig);
+		list = new BloomList<String>(filterConfig, func);
 	}
 
 	private void add(String s) throws IOException {
@@ -77,9 +88,6 @@ public class BloomListTest {
 		lst = list.getCandidates().toList();
 		// number of items returned
 		assertEquals(7, lst.size());
-		// number of hashes in the list.
-		assertEquals(6, list.size());
-
 	}
 
 	@Test
@@ -112,11 +120,11 @@ public class BloomListTest {
 		for (int i = 0; i < str.length; i++) {
 			for (int j = 0; j < str.length; j++) {
 				if (j < i) {
-					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(filters[j]));
+					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
 					assertTrue("list should contain " + j + " " + str[j], list.contains(filters[j]));
 				} else {
 					assertFalse("gate should not contain " + j + " " + filters[j],
-							list.getGate().inverseMatch(filters[j]));
+							list.getGate().inverseMatch(bf[j]));
 					assertFalse("list should not contain " + j + " " + str[j], list.contains(filters[j]));
 
 				}
@@ -124,11 +132,11 @@ public class BloomListTest {
 			add(str[i]);
 			for (int j = 0; j < str.length; j++) {
 				if (j <= i) {
-					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(filters[j]));
+					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
 					assertTrue("list should contain " + j + " " + str[j], list.contains(filters[j]));
 				} else {
 					assertFalse("gate should not contain " + j + " " + filters[j],
-							list.getGate().inverseMatch(filters[j]));
+							list.getGate().inverseMatch(bf[j]));
 					assertFalse("list should not contain " + j + " " + str[j], list.contains(filters[j]));
 
 				}

@@ -18,7 +18,8 @@
 
 package org.xenei.bloomfilter.collections;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 import org.apache.jena.util.iterator.ExtendedIterator;
@@ -28,49 +29,65 @@ import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
 /**
- * A table that contains one or more BloomLists.
+ * A table is a collections of lists.
  * 
  * This table accepts duplicates.
  *
  * @param <T> the data type.
  */
-public abstract class BloomTable<T> {
+public class BloomTable<T> {
 	private static final int PAGE_SIZE = 10000;
-	private BloomList<ProtoBloomList<T>> headers;
-	private FilterConfig childConfig;
+	private static final int DEFAULT_BUCKETS = 5;
+	private List<BloomList<T>> buckets;
+	private BloomFilter gate;
+	private FilterConfig gateConfig;
+	private final Function<T,ProtoBloomFilter> func;
 
 	/**
-	 * Create a table with the specified item size.
-	 * @param itemSize The number of items expected in each bloom list.
+	 * Default constructor.  
+	 * Creates a bloom table with a page size of 10000 and 5 buckets.
+	 *
+	 * @param func The function to convert T instance to ProtoBloomFilters.
 	 */
-	public BloomTable(int itemSize) {
-		this(PAGE_SIZE, itemSize);
+	public BloomTable(Function<T,ProtoBloomFilter> func)
+	{
+		this( DEFAULT_BUCKETS, PAGE_SIZE, func );
 	}
-
 	/**
-	 * Create a table with the specified page and item size. 
-	 * @param pageSize The number of items that are expected to be inserted into this table.
-	 * @param itemSize the number of items that are expected to be places on each list within the table.
-	 */
-	public BloomTable(int pageSize, int itemSize) {
-		this.childConfig = new FilterConfig(itemSize, pageSize);
-		this.headers = new BloomList<ProtoBloomList<T>>(new FilterConfig(pageSize, pageSize));
-	}
-
-	/**
-	 * Create the ProtoBloomFilter for the object.
+	 * Create a table with the specified pageSize.
+	 * the collision rate is calculated as 1/sqrt(pageSize)
 	 * 
-	 * @param t
-	 *            The object to create the proto filter for.
-	 * @return The constructed ProtoBloomFilter
+	 * @param buckets the number of buckets to start with.
+	 * @param pageSize the page size for each bucket.
+	 * @param func The function to convert T instance to ProtoBloomFilters.
 	 */
-	abstract protected ProtoBloomFilter createProto(T t);
+	public BloomTable(int buckets, int pageSize, Function<T,ProtoBloomFilter> func) {
+		this( buckets, new FilterConfig(pageSize, Double.valueOf(Math.ceil(Math.sqrt(pageSize))).intValue()), func);
+	}
 
 	/**
-	 * Clears ths table.
+	 * Create a table with the specified parameters.
+	 *
+	 * @param buckets the number of buckets to start with.
+	 * @param config The Filter configuration.
+	 * @param func The function to convert T instance to ProtoBloomFilters.
+	 */
+	public BloomTable(int buckets, FilterConfig config, Function<T,ProtoBloomFilter> func) {
+		this.gateConfig = config;
+		this.buckets = new ArrayList<BloomList<T>>(buckets);
+		for (int i=0;i<buckets;i++)
+		{
+			this.buckets.add(new BloomList<T>(config, func));
+		}
+		this.func = func;		
+	}
+
+	/**
+	 * Clears the table.
 	 */
 	public void clear() {
-		headers.clear();
+		buckets.clear();
+		gate = new BloomFilter(gateConfig);
 	}
 
 	/**
@@ -79,7 +96,7 @@ public abstract class BloomTable<T> {
 	 * @return The gating bloom filter.
 	 */
 	public BloomFilter getGate() {
-		return headers.getGate();
+		return gate;
 	}
 
 	/**
@@ -87,10 +104,34 @@ public abstract class BloomTable<T> {
 	 * @param t The item to put in the table.
 	 */
 	public void put(T t) {
-		ProtoBloomFilter pbf = createProto(t);
-		ProtoBloomList<T> pbl = new ProtoBloomList<T>(childConfig);
-		pbl.add(pbf, t);
-		headers.add(pbf, pbl);
+		ProtoBloomFilter pbf = func.apply(t);
+		BloomFilter bf = pbf.create(buckets.get(0).getConfig());
+		int minDist = bf.getHammingWeight();
+		BloomList<T> minList = null;
+		for (BloomList<T> lst : buckets)
+		{
+			if ( !lst.isFull())
+			{
+				int thisDist = lst.distance( bf );
+				if (minList == null || thisDist<minDist)
+				{
+					minDist = thisDist;
+					minList = lst;
+				}
+			}
+		}
+		if (minList == null) {
+			throw new IllegalStateException( "no bucket space");
+		}
+		
+
+		minList.add(pbf, t);
+		
+		// entry is full so add another bucket.
+		if (minList.isFull())
+		{
+			buckets.add(new BloomList<T>(minList.getConfig(), func));
+		}
 	}
 
 	/**
@@ -99,17 +140,13 @@ public abstract class BloomTable<T> {
 	 * @return an iterator of possible matches.
 	 */
 	public ExtendedIterator<T> getCandidates(T t) {
-		final ProtoBloomFilter pbf = createProto(t);
+		final ProtoBloomFilter pbf = func.apply(t);
 
-		Iterator<Iterator<T>> iter = headers.getCandidates(pbf).mapWith(new Function<ProtoBloomList<T>, Iterator<T>>() {
-
-			@Override
-			public Iterator<T> apply(ProtoBloomList<T> bl) {
-				return bl.getCandidates(pbf);
-			}
-		});
-
-		return WrappedIterator.createIteratorIterator(iter);
+		return WrappedIterator.createIteratorIterator( 
+				WrappedIterator.create(buckets.iterator())
+				.mapWith( bl -> bl.getCandidates(pbf)));
+		
+		
 	}
 
 }

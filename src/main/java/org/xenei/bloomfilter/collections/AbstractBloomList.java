@@ -27,37 +27,51 @@ import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
 import org.xenei.bloomfilter.BloomFilter;
-import org.xenei.bloomfilter.BloomFilterI;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
 /**
- * A list of items of type T fronted by a bloom filter. All items in this list
- * match the gate bloom filter.
+ * A list of items of type T fronted by a bloom filter. 
  * 
- * The gate is built by adding objects to the list
+ * All items in the list are represented by the gate filter.  The gate filter
+ * is created by adding items to the list.
  * 
  * @param <T>
  *            The type of object indexed into the list.
  * 
  */
-abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
+abstract class AbstractBloomList<T> {
 	// the gate bloom filter.
 	private BloomFilter gate;
-	
+	// the filter config for the gate.
+	private final FilterConfig config;
+	// a function for creating a bloom filter from a <T> object.
+	private final Function<T,ProtoBloomFilter> func;
 	// a sorted set of the items that we stored in this list.
-	protected final SortedSet<DataWrapper<T, F>> buckets;
+	protected final SortedSet<DataWrapper<T>> buckets;
 	
 	// the number of bloom filters in the list.
 	protected int size;
 
 	/**
-	 * Constructor
-	 * @param cfg The filter configuration for the gate filter.
+	 * Constructor.
+	 * @param config The Filter Configuration.
+	 * @param func A function for converting <T> objects into ProtoBloomFilters.
 	 */
-	public AbstractBloomList(FilterConfig cfg) {
-		this.gate = new BloomFilter(cfg);
-		this.buckets = new TreeSet<DataWrapper<T, F>>();
+	public AbstractBloomList(FilterConfig config, Function<T,ProtoBloomFilter> func) {
+		this.config = config;	
+		this.func = func;
+		this.buckets = new TreeSet<DataWrapper<T>>();
+		this.size = 0;
+		this.gate = new BloomFilter( config );
+	}
+	
+	/**
+	 * Add the object to this list.
+	 * @param t
+	 */
+	public final void add(T t) {
+		this.add( func.apply(t), t);
 	}
 
 	@Override
@@ -66,10 +80,17 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	}
 
 	/**
+	 * Get the filter config for this list.
+	 * @return the Filter Config.
+	 */
+	public FilterConfig getConfig() {
+		return config;
+	}
+	/**
 	 * Remove all items from this list.
 	 */
 	public void clear() {
-		gate.clear();
+		gate = new BloomFilter( config );
 		this.buckets.clear();
 		this.size = 0;
 	}
@@ -92,7 +113,7 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	 * @return true if the list is full.
 	 */
 	public boolean isFull() {
-		return gate.getConfig().getNumberOfItems() <= size;
+		return config.getNumberOfItems() <= size;
 	}
 
 	/**
@@ -122,41 +143,41 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	 * @return the distance
 	 */
 	public int distance(ProtoBloomFilter pf) {
-		return gate.distance(pf);
+		return gate.distance(pf.create(config));
 	}
 
 	/**
-	 * checks f & gate == f
+	 * Returns true if the filter is found in this list.
 	 * 
-	 * @param f The filter to look for.
+	 * @param filter The filter to look for.
 	 * @return true if this list contains the filter.
 	 */
-	public boolean contains(BloomFilter f) {
-		return gate.inverseMatch(f);
+	public boolean contains(BloomFilter filter) {
+		return gate.inverseMatch(filter);
 	}
 
 	/**
-	 * checks pbf & gate == pbf
+	 * Returns true if pbf is found in this list. 
 	 * 
 	 * @param pbf the proto bloom filter to check.
 	 * @return true if this list contains the filter.
 	 */
 	public boolean contains(ProtoBloomFilter pbf) {
-		return gate.inverseMatch(pbf);
+		return gate.inverseMatch(pbf.create(config));
 	}
 
 	/**
-	 * checks gate & pbf == gate
+	 * returns true if this gate is found in the pbf.
 	 * 
 	 * @param pbf the proto bloom filter to check.
 	 * @return true if the proto bloom filter contains the gate for this list.
 	 */
 	public boolean inverseContains(ProtoBloomFilter pbf) {
-		return gate.match(pbf);
+		return gate.match(pbf.create(config));
 	}
 
 	/**
-	 * checks gate & bf == gate
+	 * returns true if this gate is found in the bf.
 	 * 
 	 * @param bf the bloom filter to check.
 	 * @return  true if the bloom filter contains the gate for this list.
@@ -166,19 +187,11 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	}
 
 	/**
-	 * Create the data wrapper instance from a protobloomfilter and the data element.
-	 * @param pbf the Proto bloom filter for the datawrapper
-	 * @param t The data item.
-	 * @return The data wrapper.
-	 */
-	abstract protected DataWrapper<T, F> makeDataWrapper(ProtoBloomFilter pbf, T t);
-
-	/**
 	 * Add the data item fronted by the proto bloom filter to this list.
 	 * @param pbf the protobloom filter for the data item.
 	 * @param t the date item
 	 */
-	abstract public void add(ProtoBloomFilter pbf, T t);
+	abstract protected void add(ProtoBloomFilter pbf, T t);
 
 	/**
 	 * Get any exact matches for the proto bloom filter.  This is an exact match with the 
@@ -203,10 +216,10 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	 */
 	public ExtendedIterator<T> getCandidates() {
 		return WrappedIterator.createIteratorIterator(
-				WrappedIterator.create(buckets.iterator()).mapWith(new Function<DataWrapper<T, F>, Iterator<T>>() {
+				WrappedIterator.create(buckets.iterator()).mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
 
 					@Override
-					public Iterator<T> apply(DataWrapper<T, F> t) {
+					public Iterator<T> apply(DataWrapper<T> t) {
 						return t.getData();
 					}
 				})
@@ -221,9 +234,9 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	 */
 	protected void dumpBuckets() {
 		System.out.println(String.format("%s BUCKET DUMP >>>", this.getClass().getSimpleName()));
-		Iterator<DataWrapper<T, F>> pwIter = buckets.iterator();
+		Iterator<DataWrapper<T>> pwIter = buckets.iterator();
 		while (pwIter.hasNext()) {
-			DataWrapper<T, F> pw = pwIter.next();
+			DataWrapper<T> pw = pwIter.next();
 			System.out.println(pw);
 		}
 		System.out.println(String.format("<<< %s BUCKET DUMP", this.getClass().getSimpleName()));
@@ -237,14 +250,14 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 	 * @return an iterator over candidate data items.
 	 */
 	public ExtendedIterator<T> getCandidates(ProtoBloomFilter pbf) {
-		BloomFilter f = pbf.create(gate.getConfig());
+		BloomFilter f = pbf.create( config );
 		if (contains(f)) {
 			return WrappedIterator.createIteratorIterator(
-					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter().inverseMatch(f))
-							.mapWith(new Function<DataWrapper<T, F>, Iterator<T>>() {
+					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(config).inverseMatch(f))
+							.mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
 
 								@Override
-								public Iterator<T> apply(DataWrapper<T, F> t) {
+								public Iterator<T> apply(DataWrapper<T> t) {
 									return t.getData();
 								}
 							})
@@ -253,6 +266,11 @@ abstract class AbstractBloomList<T, F extends BloomFilterI<?>> {
 		} else {
 			return NiceIterator.emptyIterator();
 		}
+	}
+	
+	protected synchronized void merge( ProtoBloomFilter pbf )
+	{
+		this.gate = this.gate.merge( pbf.create(config) );
 	}
 
 }

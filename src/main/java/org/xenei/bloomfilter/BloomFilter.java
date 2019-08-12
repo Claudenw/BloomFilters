@@ -21,9 +21,11 @@ import java.util.BitSet;
 
 /**
  * A bloom filter.
+ * 
+ * This is an immutable instance.
  *
  */
-public class BloomFilter implements BloomFilterI<BloomFilter> {
+public class BloomFilter {
 
 	// the bitset we are using
 	private final BitSet bitSet;
@@ -33,56 +35,37 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 
 	// the base 2 log of the bloom filter considered as an integer.
 	private transient Double logValue;
-
-	// the Filter configuraiton for this filter. 
-	private final FilterConfig config;
-
+	
+			
 	/**
 	 * Constructor
-	 * @param config The Filter Config to used to create the bloom filter.
 	 * @param bitSet The bit set that was built by the config.
 	 */
-	public BloomFilter(FilterConfig config, BitSet bitSet) {
-		this.config = config;
+	public BloomFilter(BitSet bitSet) {
 		this.bitSet = bitSet;
 		this.hamming = null;
+		this.logValue = null;
 	}
 
 	/**
 	 * Constructor.
-	 * @param config The Filter Config to define this BloomFilter.
+	 * @param config The FilterConfig to define this BloomFilter.
 	 */
 	public BloomFilter(FilterConfig config) {
-		this(config, new BitSet(config.getNumberOfBits()));
+		this(new BitSet(config.getNumberOfBits()));
 	}
 
 	/**
-	 * Clear this bloom filter.
+	 * Return true if other & this == other
+	 * 
+	 * @param other
+	 *            the other bloom filter to match.
+	 * @return true if they match.
 	 */
-	public void clear() {
-		bitSet.clear();
-		hamming = null;
-		logValue = null;
+	public boolean inverseMatch(final BloomFilter other) {
+		return other.match(this);
 	}
-
-	/**
-	 * Get the configuration used to define this bloom filter.
-	 * @return The configuration.
-	 */
-	public FilterConfig getConfig() {
-		return config;
-	}
-
-	/**
-	 * Add a ProtoBloomFilter to this filter.  This ORs the bits of the proto bloom filter 
-	 * into this bloom filter.
-	 * @param pbf The ProtoBloomFilter to add to this filter.
-	 */
-	public void add(ProtoBloomFilter pbf) {
-		bitSet.or(pbf.create(config).bitSet);
-		hamming = null;
-		logValue = null;
-	}
+	
 
 	/**
 	 * Return true if this & other == this
@@ -91,7 +74,6 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 	 *            the other bloom filter to match.
 	 * @return true if they match.
 	 */
-	@Override
 	public final boolean match(final BloomFilter other) {
 		BitSet temp = BitSet.valueOf(this.bitSet.toByteArray());
 		temp.and(other.bitSet);
@@ -99,34 +81,7 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 	}
 
 	/**
-	 * Return true if this & other == this
-	 * 
-	 * @param other
-	 *            the proto bloom filter to match.
-	 * @return true if they match.
-	 */
-	public final boolean match(final ProtoBloomFilter other) {
-		return match(other.create(config));
-	}
-
-	@Override
-	public final boolean inverseMatch(final BloomFilter other) {
-		return other.match(this);
-	}
-
-	/**
-	 * Return true if other & this == other
-	 * 
-	 * @param other
-	 *            the proto bloom filter to match.
-	 * @return true if they match.
-	 */
-	public final boolean inverseMatch(final ProtoBloomFilter other) {
-		return inverseMatch(other.create(config));
-	}
-
-	/**
-	 * Calculate the hamming distance from this bloom filter ot the other.
+	 * Calculate the hamming distance from this bloom filter to the other.
 	 * The hamming distance is defined as this xor other and is the number of 
 	 * bits that have to be flipped to convert one filter to the other.
 	 * @param other The other bloom filter to calculate the distance to.
@@ -138,16 +93,6 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 		return temp.cardinality();
 	}
 
-	/**
-	 * Calculate the hamming distance from this bloom filter ot the other.
-	 * The hamming distance is defined as this xor other and is the number of 
-	 * bits that have to be flipped to convert one filter to the other.
-	 * @param other The proto bloom filter to calculate the distance to.
-	 * @return the distance.
-	 */
-	public final int distance(final ProtoBloomFilter other) {
-		return distance(other.create(config));
-	}
 
 	/**
 	 * Get the hamming weight for this filter.
@@ -171,7 +116,7 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 	 */
 	public final double getLog() {
 		if (logValue == null) {
-			logValue = getApproximateLog(config.getNumberOfBits());
+			logValue = getApproximateLog(bitSet.size());
 		}
 		return logValue;
 	}
@@ -240,27 +185,33 @@ public class BloomFilter implements BloomFilterI<BloomFilter> {
 		return exp;
 	}
 
+
 	@Override
 	public String toString() {
 		return bitSet.toString();
 	}
 
 	@Override
-	public int compareTo(BloomFilter o) {
-		return Double.compare(this.getLog(), o.getLog());
+	public boolean equals(Object other) {
+		return (other instanceof BloomFilter)?this.bitSet.equals(((BloomFilter)other).bitSet)
+				:false;
 	}
-
+	
 	/**
-	 * checks the bit set of this bloom filter to see if it equals the other bloom filter.
-	 * 
-	 * We can not override equals() as that would require overriding hashCode() and make them both
-	 * depend upon the internal bitSet which can be modified and thus is not suitable for the 
-	 * hashCode.
-	 * 
-	 * @param other The bloomFilter to compare to.
-	 * @return true if the bit sets are equivalent.
+	 * Merge this bloom filter with the other creating a new filter.
+	 * @param other the other filter.
+	 * @return a new filter.
 	 */
-	public boolean isEqual(BloomFilter other) {
-		return this.bitSet.equals(other.bitSet);
+	public BloomFilter merge( BloomFilter other )
+	{
+		if (other.bitSet.size() == this.bitSet.size())
+		{
+			BitSet next = (BitSet) this.bitSet.clone();
+			next.or( other.bitSet );
+			return new BloomFilter( next );
+		}
+		throw new IllegalArgumentException( "Filter are different sizes");
 	}
+	
+	
 }

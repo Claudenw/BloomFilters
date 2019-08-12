@@ -18,78 +18,101 @@
 package org.xenei.bloomfilter;
 
 import java.util.BitSet;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  * A prototypical bloom filter definition.
  * 
  * This is the information necessary to create a concrete bloom filter given a filter configuration.
-
  *
  *
  */
-public class ProtoBloomFilter implements BloomFilterI<ProtoBloomFilter> {
+public class ProtoBloomFilter implements Comparable<ProtoBloomFilter> {
 
-	// the hamming value once we have calculated it.
-	private long[] hashes;
-
+	private Set<Hash> hashes;
+	private transient Integer hashCode;
+	
 	/**
 	 * Constructor
 	 * @param hashes the two longs that were created by the murmur hash function.
 	 */
-	public ProtoBloomFilter(long[] hashes) {
-		this.hashes = hashes;
+	public ProtoBloomFilter(Set<Hash> hashes) {
+		this.hashes = new TreeSet<Hash>();
+		this.hashes.addAll( hashes );
 	}
 
 	/**
-	 * Create a concrete bloom filter from this proto type give nteh filter configuration.
+	 * Create a concrete bloom filter from this proto type given the filter configuration.
 	 * @param cfg The filter configuration to use.
 	 * @return the Concreate Bloom Filter.
 	 */
 	public final BloomFilter create(FilterConfig cfg) {
 		BitSet set = new BitSet(cfg.getNumberOfBits());
-		for (int i = 0; i < cfg.getNumberOfHashFunctions(); i++) {
-			int j = Math.abs((int) ((hashes[0] + (i * hashes[1])) % cfg.getNumberOfBits()));
-			set.set(j, true);
+		for (Hash hash : hashes)
+		{
+			hash.populate(set, cfg);
 		}
-		return new BloomFilter(cfg, set);
+		return new BloomFilter(set);
+	}
+	
+	/**
+	 * Get a list of the hashes that this proto bloom filter uses.
+	 * @return the list of hashes.
+	 */
+	public Set<Hash> getHashes()
+	{
+		return Collections.unmodifiableSet( hashes );	
 	}
 
 	@Override
 	public int hashCode() {
-		return (int) ((hashes[0] ^ (hashes[0] >>> 32)) ^ (hashes[1] ^ hashes[1] >>> 32));
+		if (hashCode == null)
+		{
+			HashCodeBuilder hb = new HashCodeBuilder();
+			for (Hash hash : hashes)
+			{
+				hb.append( hash );
+			}
+			hashCode = hb.build();
+		}
+		return hashCode.intValue();
+	}
+	
+	@Override
+	public int compareTo(ProtoBloomFilter other) {
+		Iterator<Hash> otherIter = other.hashes.iterator();
+		Iterator<Hash> iter = hashes.iterator();
+		int result;
+		while(iter.hasNext() && otherIter.hasNext())
+		{
+			result = iter.next().compareTo( otherIter.next());
+			if (result != 0)
+			{
+				return result;
+			}
+		}
+		return (otherIter.hasNext())? -1 : 1;
 	}
 
+	
 	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (o instanceof ProtoBloomFilter) {
-			ProtoBloomFilter other = (ProtoBloomFilter) o;
-			return other.hashes[0] == hashes[0] && other.hashes[1] == hashes[1];
+	public boolean equals( Object o ) {
+		if (o instanceof ProtoBloomFilter)
+		{
+			return compareTo( (ProtoBloomFilter)o ) == 0;
 		}
 		return false;
 	}
 
 	@Override
-	public int compareTo(ProtoBloomFilter pbf) {
-		int retval = Long.compare(hashes[0], pbf.hashes[0]);
-		return (retval == 0) ? Long.compare(hashes[1], pbf.hashes[1]) : retval;
-	}
-
-	@Override
 	public String toString() {
-		return String.format("ProtoBloomFilter[ %s, %s]", hashes[0], hashes[1]);
+		return String.format("ProtoBloomFilter[ %s, %s]", hashes.size(), hashCode());
 	}
 
-	@Override
-	public boolean match(BloomFilter other) {
-		return other.inverseMatch(this);
-	}
-
-	@Override
-	public boolean inverseMatch(BloomFilter other) {
-		return other.match(this);
-	}
+	
 
 }

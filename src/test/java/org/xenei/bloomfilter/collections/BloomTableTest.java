@@ -4,30 +4,30 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Function;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.xenei.bloomfilter.BloomFilterBuilder;
+import org.xenei.bloomfilter.ProtoBloomFilterBuilder;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.collections.BloomTable;
 
 public class BloomTableTest {
 	private BloomTable<String> list;
-	private BloomFilterBuilder builder = new BloomFilterBuilder();
 
+	private static Function<String,ProtoBloomFilter> func = new Function<String,ProtoBloomFilter>()
+	{
+
+		@Override
+		public ProtoBloomFilter apply(String string) {
+			return new ProtoBloomFilterBuilder().build(string);
+		}
+
+	};
+	
 	@Before
 	public void before() {
-		list = new BloomTable<String>(5, 2) {
-
-			@Override
-			protected ProtoBloomFilter createProto(String t) {
-				try {
-					return builder.update(t).build();
-				} catch (IOException e) {
-					return null;
-				}
-			}
-		};
+		list = new BloomTable<String>(func);
 	}
 
 	@Test

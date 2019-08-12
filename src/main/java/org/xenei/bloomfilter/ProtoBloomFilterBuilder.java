@@ -17,9 +17,11 @@
  */
 package org.xenei.bloomfilter;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A ProtoBloomFilter builder.
@@ -27,57 +29,55 @@ import java.nio.ByteBuffer;
  * Concrete implementations of BloomFilter can be built from the ProtoBloomFilter.
  *
  */
-public class BloomFilterBuilder {
-	private ByteArrayOutputStream baos;
+public class ProtoBloomFilterBuilder  {
+	private Set<Hash> hashes;
 
 	/**
 	 * Constructor.
 	 * 
 	 */
-	public BloomFilterBuilder() {
-		baos = new ByteArrayOutputStream();
+	public ProtoBloomFilterBuilder() {
+		hashes = new HashSet<Hash>();
 	}
-
+	
 	/**
-	 * Build the bloom filter from the current buffers.
+	 * Add the proto bloom filter the the proto bloom filter.
 	 * 
-	 * @return The ProtoBloomFilter
+	 * @param pbf 
+	 *            The proto bloom filter to add.
+	 * @return this for chaining
 	 */
-	public ProtoBloomFilter build() {
-		long[] hash = new long[2];
-		ByteBuffer buffer = ByteBuffer.wrap(baos.toByteArray());
-		hash3_x64_128(buffer, 0, buffer.limit(), 0L, hash);
-		baos.reset();
-		return new ProtoBloomFilter(hash);
+	public ProtoBloomFilterBuilder update(ProtoBloomFilter pbf) {
+		hashes.addAll( pbf.getHashes() );
+		return this;
 	}
-
+	
 	/**
-	 * Add the byte buffer to the filter.
+	 * Add the byte buffer to the proto bloom filter.
 	 * 
 	 * @param buffer
 	 *            The buffer to add.
+	 * @return The ProtoBloomFilterBuilder for chaining
+	 *           
 	 */
-	public BloomFilterBuilder update(ByteBuffer buffer) {
-		while (buffer.hasRemaining()) {
-			baos.write(buffer.get());
-		}
+	public ProtoBloomFilterBuilder update(ByteBuffer buffer) {
+		hashes.add( hash3_x64_128(buffer, 0, buffer.limit(), 0L ) );		
 		return this;
 	}
 
 	/**
-	 * Add the byte to the filter.
+	 * Add the byte to the proto bloom filter filter.
 	 * 
 	 * @param b
 	 *            The byte to add.
 	 * @return this for chaining
 	 */
-	public BloomFilterBuilder update(byte b) {
-		baos.write(b);
-		return this;
+	public ProtoBloomFilterBuilder update(byte b) {
+		return update( ByteBuffer.wrap( new byte[] { b }));
 	}
 
 	/**
-	 * Add the bytes from the string to the filter.
+	 * Add the bytes from the string to the proto bloom filter.
 	 * 
 	 * The bytes are interpreted as UTF-8 chars.
 	 * 
@@ -85,21 +85,92 @@ public class BloomFilterBuilder {
 	 *            The string to add.
 	 * @return this for chaining
 	 */
-	public BloomFilterBuilder update(String string) throws IOException {
-		return update(string.getBytes("UTF-8"));
+	public ProtoBloomFilterBuilder update(String string) {
+		return update(string.getBytes(StandardCharsets.UTF_8));
 	}
 
 	/**
-	 * Add the byte buffer to the filter.
+	 * Add the byte buffer to the proto bloom filter filter.
 	 * 
 	 * @param buffer
 	 *            The buffer to add.
 	 * @return this for chaining
 	 */
-	public BloomFilterBuilder update(byte[] buffer) throws IOException {
-		baos.write(buffer);
+	public ProtoBloomFilterBuilder update(byte[] buffer)  {
+		return update( ByteBuffer.wrap( buffer ));
+	}
+	
+	/**
+	 * Build the ProtoBloomFilter.
+	 * @return the defined ProtoBloomFilter.
+	 */
+	public ProtoBloomFilter build() {
+		try {
+			return new ProtoBloomFilter( hashes );
+		}
+		finally {
+			hashes.clear();
+		}
+	}
+	
+	/**
+	 * Add the proto bloom filter to the filter and build it.
+	 * 
+	 * @param pbf
+	 *            The proto bloom filter to add.
+	 * @return the defined ProtoBloomFilter.	 */
+	public ProtoBloomFilterBuilder build(ProtoBloomFilter pbf) {
+		hashes.addAll( pbf.getHashes() );
 		return this;
 	}
+	
+	
+	/**
+	 * Add the byte buffer to the proto bloom filter and build it.
+	 * 
+	 * @param buffer
+	 *            The buffer to add.
+	 * @return the defined ProtoBloomFilter.
+	 */
+	public ProtoBloomFilter build(ByteBuffer buffer) {
+		return update( buffer ).build();
+	}
+
+	/**
+	 * Add the byte to the proto bloom filter filter and build it.
+	 * 
+	 * @param b
+	 *            The byte to add.
+	 * @return the defined ProtoBloomFilter.
+	 */
+	public ProtoBloomFilter build(byte b) {
+		return update( b ).build();
+	}
+
+	/**
+	 * Add the bytes from the string to the proto bloom filter and build it.
+	 * 
+	 * The bytes are interpreted as UTF-8 chars.
+	 * 
+	 * @param string
+	 *            The string to add.
+	 * @return the defined ProtoBloomFilter.
+	 */
+	public ProtoBloomFilter build(String string)  {
+		return update(string).build();
+	}
+
+	/**
+	 * Add the proto bloom filter the the proto bloom filter and build it.
+	 * 
+	 * @param pbf 
+	 *            The proto bloom filter to add.
+	 * @return the defined ProtoBloomFilter.
+	 */
+	public ProtoBloomFilter build(byte[] buffer) throws IOException {
+		return update( buffer ).build();
+	}
+	
 
 	/**************************************
 	 * Methods to perform murmur 128 hash.
@@ -126,7 +197,7 @@ public class BloomFilterBuilder {
 		return k;
 	}
 
-	private void hash3_x64_128(ByteBuffer key, int offset, int length, long seed, long[] result) {
+	private Hash hash3_x64_128(ByteBuffer key, int offset, int length, long seed ) {
 		final int nblocks = length >> 4; // Process as 128-bit blocks.
 		long h1 = seed;
 		long h2 = seed;
@@ -209,8 +280,7 @@ public class BloomFilterBuilder {
 		h2 = fmix(h2);
 		h1 += h2;
 		h2 += h1;
-		result[0] = h1;
-		result[1] = h2;
+		return new Hash( h1, h2 );
 	}
 
 }

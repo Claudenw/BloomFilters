@@ -33,91 +33,49 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  *
  * @param <T>
  */
-public class BloomList<T> extends AbstractBloomList<T, BloomFilter> {
+public class BloomList<T> extends AbstractBloomList<T> {
 
 	/**
 	 * Create a bloom list.
 	 * @param cfg The filter configuration for the gating filter.
 	 */
-	public BloomList(FilterConfig cfg) {
-		super(cfg);
+	public BloomList(FilterConfig cfg, Function<T,ProtoBloomFilter> func) {
+		super(cfg, func);
 	}
 
 	@Override
-	protected DataWrapper<T, BloomFilter> makeDataWrapper(ProtoBloomFilter pbf, T t) {
-		return new DataWrapper<T, BloomFilter>(pbf.create(getGate().getConfig()), t);
-	}
-
-	@Override
-	public void add(ProtoBloomFilter pbf, T t) {
-		getGate().add(pbf);
-		DataWrapper<T, BloomFilter> dw = makeDataWrapper(pbf, t);
-		SortedSet<DataWrapper<T, BloomFilter>> pwSet = buckets.tailSet(dw);
-		if (!pwSet.isEmpty() && addClosestMatch(pwSet, dw.getFilter(), pbf, t)) {
-
-			return;
+	public void add(ProtoBloomFilter pbf, T t) {		
+		merge(pbf);
+		DataWrapper<T> dw = new DataWrapper<T>(pbf, t);
+		// get the part of the set greater than or equal to dw.
+		SortedSet<DataWrapper<T>> pwSet = buckets.tailSet(dw);
+		
+		if (!pwSet.isEmpty())
+		{
+			DataWrapper<T> dw2 = pwSet.first();
+			if (dw2.getFilter().equals( pbf ))
+			{
+				dw2.add( t );
+				return;
+			}
 		}
-
+		
 		buckets.add(dw);
 		size++;
 	}
 
-	/*
-	 * Adds the item to the closest match if possible.
-	 * 
-	 *  returns true if the item was added, false otherwise.
-	 */
-	private boolean addClosestMatch(SortedSet<DataWrapper<T, BloomFilter>> set, BloomFilter bf, ProtoBloomFilter pbf,
-			T t) {
-
-		// find the closest
-		DataWrapper<T, BloomFilter> target = null;
-		int dist = Integer.MAX_VALUE;
-		boolean logMatch = false;
-
-		Iterator<DataWrapper<T, BloomFilter>> iter = set.iterator();
-		while (iter.hasNext() && !logMatch) {
-			DataWrapper<T, BloomFilter> bl = iter.next();
-
-			if (bl.getFilter().getLog() == bf.getLog()) {
-				logMatch = true;
-				target = bl;
-			} else {
-
-				int d = bl.getFilter().distance(bf);
-				if (d < dist) {
-					target = bl;
-					dist = d;
-				}
-			}
-		}
-
-		/*
-		 * if the closest is further away than a new one would be construct a
-		 * new one
-		 */
-		if (!logMatch && dist >= bf.getHammingWeight()) {
-			return false;
-		}
-
-		// make sure it is sorted correctly
-		buckets.remove(target);
-		target.add(t);
-		buckets.add(target);
-		return true;
-	}
-
+	
 	@Override
 	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter f) {
-		BloomFilter bf = f.create(getGate().getConfig());
+		BloomFilter bf = f.create(getConfig());
 		if (contains(bf)) {
 
 			return WrappedIterator.createIteratorIterator(
-					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter().isEqual(bf))
-							.mapWith(new Function<DataWrapper<T, BloomFilter>, Iterator<T>>() {
+					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).equals(bf))
+							.mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
 
 								@Override
-								public Iterator<T> apply(DataWrapper<T, BloomFilter> t) {
+								public Iterator<T> apply(DataWrapper<T> t) {
 									return t.getData();
 								}
 							})
