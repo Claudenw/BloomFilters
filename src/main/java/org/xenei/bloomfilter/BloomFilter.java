@@ -35,10 +35,10 @@ public class BloomFilter {
 
 	// the base 2 log of the bloom filter considered as an integer.
 	private transient Double logValue;
-	
-			
+
 	/**
 	 * Constructor
+	 * 
 	 * @param bitSet The bit set that was built by the config.
 	 */
 	public BloomFilter(BitSet bitSet) {
@@ -49,6 +49,7 @@ public class BloomFilter {
 
 	/**
 	 * Constructor.
+	 * 
 	 * @param config The FilterConfig to define this BloomFilter.
 	 */
 	public BloomFilter(FilterConfig config) {
@@ -58,20 +59,17 @@ public class BloomFilter {
 	/**
 	 * Return true if other & this == other
 	 * 
-	 * @param other
-	 *            the other bloom filter to match.
+	 * @param other the other bloom filter to match.
 	 * @return true if they match.
 	 */
 	public boolean inverseMatch(final BloomFilter other) {
 		return other.match(this);
 	}
-	
 
 	/**
 	 * Return true if this & other == this
 	 * 
-	 * @param other
-	 *            the other bloom filter to match.
+	 * @param other the other bloom filter to match.
 	 * @return true if they match.
 	 */
 	public final boolean match(final BloomFilter other) {
@@ -81,9 +79,10 @@ public class BloomFilter {
 	}
 
 	/**
-	 * Calculate the hamming distance from this bloom filter to the other.
-	 * The hamming distance is defined as this xor other and is the number of 
-	 * bits that have to be flipped to convert one filter to the other.
+	 * Calculate the hamming distance from this bloom filter to the other. The
+	 * hamming distance is defined as this xor other and is the number of bits that
+	 * have to be flipped to convert one filter to the other.
+	 * 
 	 * @param other The other bloom filter to calculate the distance to.
 	 * @return the distance.
 	 */
@@ -92,7 +91,6 @@ public class BloomFilter {
 		temp.xor(other.bitSet);
 		return temp.cardinality();
 	}
-
 
 	/**
 	 * Get the hamming weight for this filter.
@@ -109,9 +107,10 @@ public class BloomFilter {
 	}
 
 	/**
-	 * The the log(2) of this bloom filter.
-	 * This is the base 2 logarithm of this bloom filter if thie bits in this filter
-	 * were considers the bits in an unsigned integer.
+	 * The the log(2) of this bloom filter. This is the base 2 logarithm of this
+	 * bloom filter if thie bits in this filter were considers the bits in an
+	 * unsigned integer.
+	 * 
 	 * @return the base 2 logarithm
 	 */
 	public final double getLog() {
@@ -122,15 +121,14 @@ public class BloomFilter {
 	}
 
 	/**
-	 * Get the approximate log for this filter. If the bloom filter is
-	 * considered as an unsigned number what is the approximate base 2 log of
-	 * that value. The depth argument indicates how many extra bits are to be
-	 * considered in the log calculation. At least one bit must be considered.
-	 * If there are no bits on then the log value is 0.
+	 * Get the approximate log for this filter. If the bloom filter is considered as
+	 * an unsigned number what is the approximate base 2 log of that value. The
+	 * depth argument indicates how many extra bits are to be considered in the log
+	 * calculation. At least one bit must be considered. If there are no bits on
+	 * then the log value is 0.
 	 * 
 	 * @see AbstractBloomFilter.getApproximateLog()
-	 * @param depth
-	 *            the number of bits to consider.
+	 * @param depth the number of bits to consider.
 	 * @return the approximate log.
 	 */
 	private final double getApproximateLog(int depth) {
@@ -185,7 +183,6 @@ public class BloomFilter {
 		return exp;
 	}
 
-
 	@Override
 	public String toString() {
 		return bitSet.toString();
@@ -193,25 +190,22 @@ public class BloomFilter {
 
 	@Override
 	public boolean equals(Object other) {
-		return (other instanceof BloomFilter)?this.bitSet.equals(((BloomFilter)other).bitSet)
-				:false;
+		return (other instanceof BloomFilter) ? this.bitSet.equals(((BloomFilter) other).bitSet) : false;
 	}
-	
+
 	/**
 	 * Merge this bloom filter with the other creating a new filter.
+	 * 
 	 * @param other the other filter.
 	 * @return a new filter.
 	 */
-	public BloomFilter merge( BloomFilter other )
-	{
-		if (other.bitSet.size() == this.bitSet.size())
-		{
+	public BloomFilter merge(BloomFilter other) {
+		if (other.bitSet.size() == this.bitSet.size()) {
 			BitSet next = (BitSet) this.bitSet.clone();
-			next.or( other.bitSet );
-			return new BloomFilter( next );
+			next.or(other.bitSet);
+			return new BloomFilter(next);
 		}
-		throw new IllegalArgumentException( "Filter are different sizes");
+		throw new IllegalArgumentException("Filter are different sizes");
 	}
-	
-	
+
 }

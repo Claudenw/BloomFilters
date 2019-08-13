@@ -27,7 +27,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 /**
  * A prototypical bloom filter definition.
  * 
- * This is the information necessary to create a concrete bloom filter given a filter configuration.
+ * This is the information necessary to create a concrete bloom filter given a
+ * filter configuration.
  *
  *
  */
@@ -35,75 +36,71 @@ public class ProtoBloomFilter implements Comparable<ProtoBloomFilter> {
 
 	private Set<Hash> hashes;
 	private transient Integer hashCode;
-	
+
 	/**
 	 * Constructor
+	 * 
 	 * @param hashes the two longs that were created by the murmur hash function.
 	 */
 	public ProtoBloomFilter(Set<Hash> hashes) {
 		this.hashes = new TreeSet<Hash>();
-		this.hashes.addAll( hashes );
+		this.hashes.addAll(hashes);
 	}
 
 	/**
-	 * Create a concrete bloom filter from this proto type given the filter configuration.
+	 * Create a concrete bloom filter from this proto type given the filter
+	 * configuration.
+	 * 
 	 * @param cfg The filter configuration to use.
 	 * @return the Concreate Bloom Filter.
 	 */
 	public final BloomFilter create(FilterConfig cfg) {
 		BitSet set = new BitSet(cfg.getNumberOfBits());
-		for (Hash hash : hashes)
-		{
+		for (Hash hash : hashes) {
 			hash.populate(set, cfg);
 		}
 		return new BloomFilter(set);
 	}
-	
+
 	/**
 	 * Get a list of the hashes that this proto bloom filter uses.
+	 * 
 	 * @return the list of hashes.
 	 */
-	public Set<Hash> getHashes()
-	{
-		return Collections.unmodifiableSet( hashes );	
+	public Set<Hash> getHashes() {
+		return Collections.unmodifiableSet(hashes);
 	}
 
 	@Override
 	public int hashCode() {
-		if (hashCode == null)
-		{
+		if (hashCode == null) {
 			HashCodeBuilder hb = new HashCodeBuilder();
-			for (Hash hash : hashes)
-			{
-				hb.append( hash );
+			for (Hash hash : hashes) {
+				hb.append(hash);
 			}
 			hashCode = hb.build();
 		}
 		return hashCode.intValue();
 	}
-	
+
 	@Override
 	public int compareTo(ProtoBloomFilter other) {
 		Iterator<Hash> otherIter = other.hashes.iterator();
 		Iterator<Hash> iter = hashes.iterator();
 		int result;
-		while(iter.hasNext() && otherIter.hasNext())
-		{
-			result = iter.next().compareTo( otherIter.next());
-			if (result != 0)
-			{
+		while (iter.hasNext() && otherIter.hasNext()) {
+			result = iter.next().compareTo(otherIter.next());
+			if (result != 0) {
 				return result;
 			}
 		}
-		return (otherIter.hasNext())? -1 : 1;
+		return (otherIter.hasNext()) ? -1 : 1;
 	}
 
-	
 	@Override
-	public boolean equals( Object o ) {
-		if (o instanceof ProtoBloomFilter)
-		{
-			return compareTo( (ProtoBloomFilter)o ) == 0;
+	public boolean equals(Object o) {
+		if (o instanceof ProtoBloomFilter) {
+			return compareTo((ProtoBloomFilter) o) == 0;
 		}
 		return false;
 	}
@@ -112,7 +109,5 @@ public class ProtoBloomFilter implements Comparable<ProtoBloomFilter> {
 	public String toString() {
 		return String.format("ProtoBloomFilter[ %s, %s]", hashes.size(), hashCode());
 	}
-
-	
 
 }

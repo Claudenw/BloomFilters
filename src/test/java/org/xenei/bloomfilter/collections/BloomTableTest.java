@@ -37,10 +37,10 @@ public class BloomTableTest {
 		String collision = "g"; // collides with "five"
 
 		for (String s : str) {
-			list.put(s);
+			list.add(s);
 		}
 
-		list.put(collision);
+		list.add(collision);
 
 		List<String> lst = list.getCandidates(collision).toList();
 		assertEquals(1, lst.size());
@@ -58,11 +58,11 @@ public class BloomTableTest {
 	}
 
 	@Test
-	public void putTest() {
+	public void addTest() {
 		String[] str = { "one", "two", "three", "four", "five" };
 		int[] values = { 1, 1, 1, 1, 1 };
 		for (String s : str) {
-			list.put(s);
+			list.add(s);
 		}
 		List<String> lst = null;
 		int idx = 0;
@@ -74,7 +74,7 @@ public class BloomTableTest {
 		lst = list.getCandidates("six").toList();
 		assertEquals("Should be none", 0, lst.size());
 
-		list.put("five");
+		list.add("five");
 
 		for (String s : str) {
 			lst = list.getCandidates(s).toList();

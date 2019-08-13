@@ -19,6 +19,7 @@ package org.xenei.bloomfilter.collections;
 
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 import org.apache.jena.util.iterator.ExtendedIterator;
@@ -33,42 +34,99 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  *
  * @param <T>
  */
-public class BloomList<T> extends AbstractBloomList<T> {
+public class BloomList<T> extends AbstractBloomCollection<T> {
+
+	// a sorted set of the items that we stored in this list.
+	protected final SortedSet<DataWrapper<T>> buckets;
+
+	// the number of objects in the list.
+	protected int size;
 
 	/**
-	 * Create a bloom list.
-	 * @param cfg The filter configuration for the gating filter.
+	 * Constructor.
+	 * 
+	 * @param config The Filter Configuration.
+	 * @param func   A function for converting <T> objects into ProtoBloomFilters.
 	 */
-	public BloomList(FilterConfig cfg, Function<T,ProtoBloomFilter> func) {
-		super(cfg, func);
+	public BloomList(FilterConfig config, Function<T, ProtoBloomFilter> func) {
+		super(config, func);
+		this.buckets = new TreeSet<DataWrapper<T>>();
+		this.size = 0;
+	}
+
+	/**
+	 * Get an iterator over all the data elements in the list.
+	 * 
+	 * @return an iterator over the data elements.
+	 */
+	@Override
+	public ExtendedIterator<T> iterator() {
+		return WrappedIterator.createIteratorIterator(
+				WrappedIterator.create(buckets.iterator()).mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
+
+					@Override
+					public Iterator<T> apply(DataWrapper<T> t) {
+						return t.getData();
+					}
+				})
+
+		);
 	}
 
 	@Override
-	public void add(ProtoBloomFilter pbf, T t) {		
+	public boolean add(ProtoBloomFilter pbf, T t) {
 		merge(pbf);
 		DataWrapper<T> dw = new DataWrapper<T>(pbf, t);
 		// get the part of the set greater than or equal to dw.
 		SortedSet<DataWrapper<T>> pwSet = buckets.tailSet(dw);
-		
-		if (!pwSet.isEmpty())
-		{
+
+		if (!pwSet.isEmpty()) {
 			DataWrapper<T> dw2 = pwSet.first();
-			if (dw2.getFilter().equals( pbf ))
-			{
-				dw2.add( t );
-				return;
+			if (dw2.getFilter().equals(pbf)) {
+				dw2.add(t);
+				size++;
+				return true;
 			}
 		}
-		
+
 		buckets.add(dw);
 		size++;
+		return true;
 	}
 
-	
+	/**
+	 * Clears the table.
+	 */
 	@Override
-	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter f) {
-		BloomFilter bf = f.create(getConfig());
-		if (contains(bf)) {
+	protected void doClear() {
+		buckets.clear();
+		size = 0;
+	}
+
+	@Override
+	public ExtendedIterator<T> getCandidates(ProtoBloomFilter pbf) {
+		BloomFilter f = pbf.create(getConfig());
+		if (matches(f)) {
+			return WrappedIterator.createIteratorIterator(
+					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).inverseMatch(f))
+							.mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
+
+								@Override
+								public Iterator<T> apply(DataWrapper<T> t) {
+									return t.getData();
+								}
+							})
+
+			);
+		} else {
+			return NiceIterator.emptyIterator();
+		}
+	}
+
+	@Override
+	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto) {
+		BloomFilter bf = proto.create(getConfig());
+		if (matches(bf)) {
 
 			return WrappedIterator.createIteratorIterator(
 					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).equals(bf))
@@ -85,4 +143,15 @@ public class BloomList<T> extends AbstractBloomList<T> {
 			return NiceIterator.emptyIterator();
 		}
 	}
+
+	@Override
+	public boolean remove(ProtoBloomFilter proto, T t) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public int size() {
+		return size;
+	}
+
 }

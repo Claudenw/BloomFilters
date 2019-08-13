@@ -7,7 +7,8 @@ import java.io.Serializable;
  *
  * This class contains the values for the filter configuration.
  *
- * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter calculator</a>
+ * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter
+ *      calculator</a>
  *
  */
 public class FilterConfig implements Serializable {
@@ -25,9 +26,10 @@ public class FilterConfig implements Serializable {
 	private int numberOfBits;
 	// number of hash functions
 	private int numberOfHashFunctions;
-	
+
 	/**
-	 * A main method to generate and output the results of different constructor arguments.
+	 * A main method to generate and output the results of different constructor
+	 * arguments.
 	 * 
 	 * Arguments:
 	 * <ol>
@@ -39,22 +41,19 @@ public class FilterConfig implements Serializable {
 	 * 
 	 * @param args the arguments
 	 */
-	public static void main(String[] args)
-	{
-		FilterConfig fc = new FilterConfig( Integer.parseInt(args[0]), Integer.parseInt(args[1]));
-		System.out.println( String.format( "items: %s bits: %s bytes: %s functions: %s p: 1/%s (%s)", 
-				fc.getNumberOfItems(), fc.getNumberOfBits(), fc.getNumberOfBytes(),
-				fc.getNumberOfHashFunctions(), fc.getProbability(), (1.0/fc.getProbability())));
+	public static void main(String[] args) {
+		FilterConfig fc = new FilterConfig(Integer.parseInt(args[0]), Integer.parseInt(args[1]));
+		System.out.println(String.format("items: %s bits: %s bytes: %s functions: %s p: 1/%s (%s)",
+				fc.getNumberOfItems(), fc.getNumberOfBits(), fc.getNumberOfBytes(), fc.getNumberOfHashFunctions(),
+				fc.getProbability(), (1.0 / fc.getProbability())));
 	}
 
 	/**
 	 * Create a filter configuration with the specified number of bits and
 	 * probability.
 	 * 
-	 * @param numberOfItems
-	 *            Number of items to be placed in the filter.
-	 * @param probability
-	 *            The probability of duplicates expressed as 1 in x.
+	 * @param numberOfItems Number of items to be placed in the filter.
+	 * @param probability   The probability of duplicates expressed as 1 in x.
 	 */
 	public FilterConfig(final int numberOfItems, final int probability) {
 		this.numberOfItems = numberOfItems;
@@ -83,8 +82,7 @@ public class FilterConfig implements Serializable {
 	}
 
 	/**
-	 * The probability of a false positive (collision) expressed as 1/x. AKA:
-	 * 1/p
+	 * The probability of a false positive (collision) expressed as 1/x. AKA: 1/p
 	 * 
 	 * @return the x in 1/x.
 	 */

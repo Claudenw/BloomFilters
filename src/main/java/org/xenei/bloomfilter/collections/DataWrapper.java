@@ -36,47 +36,48 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
 public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	// the list of data items
 	private List<T> data;
-	/* the proto bloom filter.
-	 * This proto filter is the same for all the items.  That is each item
-	 * generated the same proto filter.
+	/*
+	 * the proto bloom filter. This proto filter is the same for all the items. That
+	 * is each item generated the same proto filter.
 	 */
 	private ProtoBloomFilter proto;
-	
+
 	/*
 	 * A soft reference to a calculated bloom filter and its configuration.
 	 */
 	private SoftReference<BloomFilterPair> bloomFilterPair;
-	
 
 	/**
 	 * Constructor.
+	 * 
 	 * @param proto The proto bloom filter to use.
-	 * @param t the data item to store.
+	 * @param t     the data item to store.
 	 */
 	public DataWrapper(ProtoBloomFilter proto, T t) {
 		this.proto = proto;
 		this.data = new ArrayList<T>();
-		this.data.add( t );
+		this.data.add(t);
 		this.bloomFilterPair = null;
 	}
 
 	/**
 	 * Get the proto filter from this wrapper.
+	 * 
 	 * @return the filter.
 	 */
 	public ProtoBloomFilter getFilter() {
 		return proto;
 	}
-	
+
 	/**
 	 * get the bloom filter.
+	 * 
 	 * @param config the configuration for the filter.
 	 * @return the bloom filter
 	 */
-	public BloomFilter getFilter( FilterConfig config ) {
-		BloomFilterPair bfp = (bloomFilterPair == null)? null : bloomFilterPair.get();
-		if (bfp != null && bfp.config.equals(config))
-		{
+	public BloomFilter getFilter(FilterConfig config) {
+		BloomFilterPair bfp = (bloomFilterPair == null) ? null : bloomFilterPair.get();
+		if (bfp != null && bfp.config.equals(config)) {
 			return bfp.bloomFilter;
 		}
 		bfp = new BloomFilterPair(config);
@@ -86,7 +87,8 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 
 	/**
 	 * Get an iterator over data from this wrapper.
-	 * @return an iterator over data. 
+	 * 
+	 * @return an iterator over data.
 	 */
 	public Iterator<T> getData() {
 		return data.iterator();
@@ -94,6 +96,7 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 
 	/**
 	 * the number of items that will be returned in the iterator.
+	 * 
 	 * @return The number of items fronted by this wrapper.
 	 */
 	public int size() {
@@ -102,21 +105,21 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 
 	/**
 	 * Add an item to the wrapper.
+	 * 
 	 * @param t A data item that matches the filter.
 	 */
 	public void add(T t) {
 		data.add(t);
 	}
 
-	
 	@Override
 	public int hashCode() {
 		return proto.hashCode();
 	}
 
 	/**
-	 * Datawrappers are equals if the proto bloom filters are equal.
-	 * No test is made for container contents.
+	 * Datawrappers are equals if the proto bloom filters are equal. No test is made
+	 * for container contents.
 	 */
 	@Override
 	public boolean equals(Object o) {
@@ -143,9 +146,8 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	private class BloomFilterPair {
 		BloomFilter bloomFilter;
 		FilterConfig config;
-		
-		BloomFilterPair(FilterConfig config)
-		{
+
+		BloomFilterPair(FilterConfig config) {
 			this.config = config;
 			this.bloomFilter = proto.create(config);
 		}

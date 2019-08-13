@@ -11,6 +11,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -21,16 +22,15 @@ public class BloomListTest {
 	private FilterConfig filterConfig = new FilterConfig(5, 10);
 	private ProtoBloomFilterBuilder builder = new ProtoBloomFilterBuilder();
 
-	private static Function<String,ProtoBloomFilter> func = new Function<String,ProtoBloomFilter>()
-			{
+	private static Function<String, ProtoBloomFilter> func = new Function<String, ProtoBloomFilter>() {
 
-				@Override
-				public ProtoBloomFilter apply(String string) {
-					return new ProtoBloomFilterBuilder().build(string);
-				}
-		
-			};
-			
+		@Override
+		public ProtoBloomFilter apply(String string) {
+			return new ProtoBloomFilterBuilder().build(string);
+		}
+
+	};
+
 	@Before
 	public void before() {
 		list = new BloomList<String>(filterConfig, func);
@@ -69,14 +69,14 @@ public class BloomListTest {
 			add(s);
 		}
 
-		List<String> lst = list.getCandidates().toList();
+		List<String> lst = list.stream().collect( Collectors.toList());
 		for (String s : str) {
 			assertTrue("missing " + s, lst.contains(s));
 		}
 
 		assertTrue(list.isFull());
 		add("six");
-		lst = list.getCandidates().toList();
+		lst = list.stream().collect( Collectors.toList());
 		for (String s : str) {
 			assertTrue("missing " + s, lst.contains(s));
 		}
@@ -85,7 +85,7 @@ public class BloomListTest {
 		assertEquals(6, list.size());
 
 		add("six");
-		lst = list.getCandidates().toList();
+		lst = list.stream().collect( Collectors.toList());
 		// number of items returned
 		assertEquals(7, lst.size());
 	}
@@ -98,18 +98,18 @@ public class BloomListTest {
 		}
 		list.clear();
 
-		assertFalse("Should not be any candidates", list.getCandidates().hasNext());
-		assertFalse("Shold not be full", list.isFull());
+		assertFalse("Should not be any candidates", list.iterator().hasNext());
+		assertFalse("Should not be full", list.isFull());
 
 		for (String s : str) {
-			assertFalse("should not contain " + s, list.contains(builder.update(s).build()));
+			assertFalse("should not contain " + s, list.matches(builder.update(s).build()));
 		}
 		assertEquals("List should be empty", 0, list.size());
 
 	}
 
 	@Test
-	public void containsTest() throws IOException {
+	public void matchesTest() throws IOException {
 		String[] str = { "one", "two", "three", "four", "five" };
 		ProtoBloomFilter filters[] = new ProtoBloomFilter[str.length];
 		BloomFilter bf[] = new BloomFilter[str.length];
@@ -121,11 +121,10 @@ public class BloomListTest {
 			for (int j = 0; j < str.length; j++) {
 				if (j < i) {
 					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
-					assertTrue("list should contain " + j + " " + str[j], list.contains(filters[j]));
+					assertTrue("list should contain " + j + " " + str[j], list.matches(filters[j]));
 				} else {
-					assertFalse("gate should not contain " + j + " " + filters[j],
-							list.getGate().inverseMatch(bf[j]));
-					assertFalse("list should not contain " + j + " " + str[j], list.contains(filters[j]));
+					assertFalse("gate should not contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
+					assertFalse("list should not contain " + j + " " + str[j], list.matches(filters[j]));
 
 				}
 			}
@@ -133,11 +132,10 @@ public class BloomListTest {
 			for (int j = 0; j < str.length; j++) {
 				if (j <= i) {
 					assertTrue("gate should contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
-					assertTrue("list should contain " + j + " " + str[j], list.contains(filters[j]));
+					assertTrue("list should contain " + j + " " + str[j], list.matches(filters[j]));
 				} else {
-					assertFalse("gate should not contain " + j + " " + filters[j],
-							list.getGate().inverseMatch(bf[j]));
-					assertFalse("list should not contain " + j + " " + str[j], list.contains(filters[j]));
+					assertFalse("gate should not contain " + j + " " + filters[j], list.getGate().inverseMatch(bf[j]));
+					assertFalse("list should not contain " + j + " " + str[j], list.matches(filters[j]));
 
 				}
 			}
@@ -176,7 +174,7 @@ public class BloomListTest {
 		}
 		add("two");
 
-		List<String> lst = list.getCandidates().toList();
+		List<String> lst = list.stream().collect( Collectors.toList());
 		assertEquals("Should be 3 candidates", 3, lst.size());
 
 		lst = list.getCandidates(builder.update("two").build()).toList();
@@ -191,13 +189,13 @@ public class BloomListTest {
 	public void hasExactMatchTest() throws IOException {
 		ProtoBloomFilter pbf = builder.update("one").build();
 
-		assertFalse("Should not have one", list.hasExactMatch(pbf));
+		assertFalse("Should not have one", list.getExactMatches(pbf).hasNext());
 
 		add("one");
-		assertTrue("Should have one", list.hasExactMatch(pbf));
+		assertTrue("Should have one", list.getExactMatches(pbf).hasNext());
 
 		pbf = builder.update("two").build();
-		assertFalse("Should not have two", list.hasExactMatch(pbf));
+		assertFalse("Should not have two", list.getExactMatches(pbf).hasNext());
 	}
 
 }
