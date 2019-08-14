@@ -146,7 +146,35 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		throw new UnsupportedOperationException();
+		BloomFilter bf = proto.create(getConfig());
+		boolean removed = false;
+		if (matches(bf)) {
+			Iterator<DataWrapper<T>> iter = buckets.iterator();
+			while (iter.hasNext())
+			{
+				DataWrapper<T> wrapper = iter.next();
+				if (bf.match( wrapper.getFilter( getConfig() ) ))
+				{
+					Iterator<T> tIter = wrapper.getData();
+					while (tIter.hasNext())
+					{
+						T other = tIter.next();
+						if (other.equals( t ))
+						{
+							tIter.remove();
+							size--;
+							removed = true;
+						}
+					}
+					if ( ! wrapper.getData().hasNext())
+					{
+						iter.remove();
+						collectionStats.delete();
+					}
+				}
+			}
+		}
+		return removed;
 	}
 
 	@Override

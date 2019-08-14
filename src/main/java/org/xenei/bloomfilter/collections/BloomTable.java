@@ -19,6 +19,7 @@
 package org.xenei.bloomfilter.collections;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
@@ -131,7 +132,22 @@ public class BloomTable<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		throw new UnsupportedOperationException();
+		// use the bucket config not the master config.
+		BloomFilter bf = proto.create(buckets.get(0).getConfig());
+		boolean removed = false;
+		Iterator<BloomCollection<T>> iter = buckets.iterator();
+		while (iter.hasNext())
+		{
+			BloomCollection<T> bloomCollection = iter.next();
+			long deleteCount = bloomCollection.getStats().getDeleteCount();
+			if (bloomCollection.remove( proto, t ))
+			{
+				long count = bloomCollection.getStats().getDeleteCount() - deleteCount;
+				getStats().delete( count );
+				removed = true;
+			}
+		}
+		return removed;
 	}
 
 	@Override

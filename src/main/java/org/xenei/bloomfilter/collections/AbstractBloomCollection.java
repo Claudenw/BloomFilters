@@ -14,8 +14,9 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	private final FilterConfig gateConfig;
 	// a function for creating a bloom filter from a <T> object.
 	private final Function<T, ProtoBloomFilter> func;
+	
+	protected final CollectionStats collectionStats;
 
-	private int filterCount;
 
 	/**
 	 * Constructor.
@@ -27,7 +28,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 		this.gateConfig = config;
 		this.func = func;
 		this.gate = new BloomFilter(config);
-		this.filterCount = 0;
+		this.collectionStats = new CollectionStats();
 
 	}
 
@@ -49,7 +50,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	public final void clear() {
 		doClear();
 		this.gate = new BloomFilter(gateConfig);
-		this.filterCount = 0;
+		collectionStats.clear();
 	}
 
 	/**
@@ -128,17 +129,22 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 		return gate.inverseMatch(bf);
 	}
 
+	@Override
+	public CollectionStats getStats() {
+		return collectionStats;
+	}
+	
 	public int getFilterCount() {
-		return filterCount;
+		return CollectionStats.asInt( collectionStats.getFilterCount() );
 	}
 
 	protected synchronized void merge(ProtoBloomFilter pbf) {
+		collectionStats.insert();
 		BloomFilter other = pbf.create(gateConfig);
 		if (gate.inverseMatch(other)) {
 			return;
 		}
 		this.gate = this.gate.merge(pbf.create(gateConfig));
-		this.filterCount++;
 	}
 
 	/**
