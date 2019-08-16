@@ -208,4 +208,11 @@ public class BloomFilter {
 		throw new IllegalArgumentException("Filter are different sizes");
 	}
 
+	/**
+	 * Return the filter as a bitset.
+	 * @return the bit set representation.
+	 */
+	public BitSet asBitSet() {
+		return bitSet;
+	}
 }

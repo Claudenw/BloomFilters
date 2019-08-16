@@ -1,6 +1,11 @@
 package org.xenei.bloomfilter.collections;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.AbstractCollection;
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.xenei.bloomfilter.BloomFilter;
@@ -17,6 +22,25 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	
 	protected final CollectionStats collectionStats;
 
+	public static Config read( DataInputStream stream ) throws IOException {
+		Config cfg = new Config();
+		cfg.gateConfig = FilterConfig.read(stream);
+		byte[] bitBuffer = new byte[ cfg.gateConfig.getNumberOfBytes() ];
+		stream.read( bitBuffer );
+		cfg.gate = new BloomFilter( BitSet.valueOf( bitBuffer ));
+		cfg.collectionStats = CollectionStats.read( stream );
+		return cfg;
+	}
+
+	public void write( DataOutputStream stream ) throws IOException {
+		FilterConfig.write( gateConfig, stream );
+		byte[] buff = new byte[gateConfig.getNumberOfBytes()];
+		Arrays.fill(buff, (byte)0);
+		byte[] other = gate.asBitSet().toByteArray();
+		System.arraycopy( other, 0, buff, 0, other.length );
+		stream.write( buff );
+		CollectionStats.write( collectionStats, stream );
+	}
 
 	/**
 	 * Constructor.
@@ -25,13 +49,25 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	 * @param func   A function for converting <T> objects into ProtoBloomFilters.
 	 */
 	protected AbstractBloomCollection(FilterConfig config, Function<T, ProtoBloomFilter> func) {
+		this(config, func, new BloomFilter(config), new CollectionStats());
+	}
+	
+	
+
+	/**
+	 * Constructor.
+	 * 
+	 * @param config The Filter Configuration.
+	 * @param func   A function for converting <T> objects into ProtoBloomFilters.
+	 */
+	protected AbstractBloomCollection(FilterConfig config, Function<T, ProtoBloomFilter> func,
+			BloomFilter gate, CollectionStats collectionStats) {
 		this.gateConfig = config;
 		this.func = func;
-		this.gate = new BloomFilter(config);
-		this.collectionStats = new CollectionStats();
+		this.gate = gate;
+		this.collectionStats = collectionStats;
 
 	}
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public final boolean contains(Object o) {
@@ -158,4 +194,11 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 		return getCandidates(func.apply(t));
 	}
 
+	public static class Config {
+		FilterConfig gateConfig;
+		BloomFilter gate;
+		CollectionStats collectionStats;		
+	}
+	
+	
 }

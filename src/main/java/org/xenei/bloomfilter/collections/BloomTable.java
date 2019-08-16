@@ -93,6 +93,7 @@ public class BloomTable<T> extends AbstractBloomCollection<T> {
 	@Override
 	public boolean add(ProtoBloomFilter proto, T t) {
 		// use the bucket config not the master config.
+		merge(proto);
 		BloomFilter bf = proto.create(buckets.get(0).getConfig());
 		int minDist = bf.getHammingWeight();
 		BloomCollection<T> minList = null;
@@ -132,8 +133,6 @@ public class BloomTable<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		// use the bucket config not the master config.
-		BloomFilter bf = proto.create(buckets.get(0).getConfig());
 		boolean removed = false;
 		Iterator<BloomCollection<T>> iter = buckets.iterator();
 		while (iter.hasNext())

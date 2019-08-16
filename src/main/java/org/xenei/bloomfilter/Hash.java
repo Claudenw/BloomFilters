@@ -12,7 +12,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * configuration.
  *
  */
-class Hash implements Comparable<Hash> {
+public class Hash implements Comparable<Hash> {
 	private long h1;
 	private long h2;
 	private transient Integer hashCode;
@@ -32,6 +32,16 @@ class Hash implements Comparable<Hash> {
 			set.set(j, true);
 		}
 		return set;
+	}
+	
+	public long h1()
+	{
+		return h1;
+	}
+	
+	public long h2()
+	{
+		return h2;
 	}
 
 	@Override
@@ -59,6 +69,11 @@ class Hash implements Comparable<Hash> {
 			return h1 == other.h1 && h2 == other.h2;
 		}
 		return false;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format( "Hash[ %s %s ]", Long.toHexString(h1), Long.toHexString(h2));
 	}
 
 }

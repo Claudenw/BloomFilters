@@ -33,9 +33,8 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  *
  * @param <T> The type of data to be wrapped.
  */
-public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
-	// the list of data items
-	private List<T> data;
+public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataWrapper<T>> {
+	
 	/*
 	 * the proto bloom filter. This proto filter is the same for all the items. That
 	 * is each item generated the same proto filter.
@@ -51,13 +50,19 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	 * Constructor.
 	 * 
 	 * @param proto The proto bloom filter to use.
-	 * @param t     the data item to store.
 	 */
-	public DataWrapper(ProtoBloomFilter proto, T t) {
-		this.proto = proto;
-		this.data = new ArrayList<T>();
-		this.data.add(t);
+	public AbstractDataWrapper(ProtoBloomFilter proto) {
+		this.proto = proto;		
 		this.bloomFilterPair = null;
+	}
+	
+	protected AbstractDataWrapper() {
+		this(null);
+	}
+	
+	protected void setProtoBloomFilter( ProtoBloomFilter proto )
+	{
+		this.proto = proto;
 	}
 
 	/**
@@ -65,7 +70,7 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	 * 
 	 * @return the filter.
 	 */
-	public ProtoBloomFilter getFilter() {
+	public final ProtoBloomFilter getProto() {
 		return proto;
 	}
 
@@ -75,7 +80,7 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	 * @param config the configuration for the filter.
 	 * @return the bloom filter
 	 */
-	public BloomFilter getFilter(FilterConfig config) {
+	public final BloomFilter getFilter(FilterConfig config) {
 		BloomFilterPair bfp = (bloomFilterPair == null) ? null : bloomFilterPair.get();
 		if (bfp != null && bfp.config.equals(config)) {
 			return bfp.bloomFilter;
@@ -90,30 +95,25 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	 * 
 	 * @return an iterator over data.
 	 */
-	public Iterator<T> getData() {
-		return data.iterator();
-	}
-
+	abstract public Iterator<T> getData();
 	/**
 	 * the number of items that will be returned in the iterator.
 	 * 
 	 * @return The number of items fronted by this wrapper.
 	 */
-	public int size() {
-		return data.size();
-	}
+	abstract public int size();
 
 	/**
 	 * Add an item to the wrapper.
 	 * 
 	 * @param t A data item that matches the filter.
 	 */
-	public void add(T t) {
-		data.add(t);
-	}
+	abstract public void add(T t);
+	
+	abstract public boolean remove(T t);
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return proto.hashCode();
 	}
 
@@ -122,21 +122,16 @@ public class DataWrapper<T> implements Comparable<DataWrapper<T>> {
 	 * for container contents.
 	 */
 	@Override
-	public boolean equals(Object o) {
-		return (o instanceof DataWrapper<?>) ? ((DataWrapper<?>) o).proto.equals(proto) : false;
+	public final boolean equals(Object o) {
+		return (o instanceof AbstractDataWrapper<?>) ? ((AbstractDataWrapper<?>) o).proto.equals(proto) : false;
 	}
 
 	/**
 	 * Compares proto bloom filters.
 	 */
 	@Override
-	public int compareTo(DataWrapper<T> o) {
+	public final int compareTo(AbstractDataWrapper<T> o) {
 		return proto.compareTo(o.proto);
-	}
-
-	@Override
-	public String toString() {
-		return String.format("DataWrapper[ %s x %s [%s]", data.size(), proto, data);
 	}
 
 	/**

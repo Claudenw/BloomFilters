@@ -17,7 +17,9 @@
  */
 package org.xenei.bloomfilter.collections;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -37,7 +39,7 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
 public class BloomList<T> extends AbstractBloomCollection<T> {
 
 	// a sorted set of the items that we stored in this list.
-	protected final SortedSet<DataWrapper<T>> buckets;
+	protected final SortedSet<AbstractDataWrapper<T>> buckets;
 
 	// the number of objects in the list.
 	protected int size;
@@ -50,7 +52,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 	 */
 	public BloomList(FilterConfig config, Function<T, ProtoBloomFilter> func) {
 		super(config, func);
-		this.buckets = new TreeSet<DataWrapper<T>>();
+		this.buckets = new TreeSet<AbstractDataWrapper<T>>();
 		this.size = 0;
 	}
 
@@ -62,10 +64,10 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 	@Override
 	public ExtendedIterator<T> iterator() {
 		return WrappedIterator.createIteratorIterator(
-				WrappedIterator.create(buckets.iterator()).mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
+				WrappedIterator.create(buckets.iterator()).mapWith(new Function<AbstractDataWrapper<T>, Iterator<T>>() {
 
 					@Override
-					public Iterator<T> apply(DataWrapper<T> t) {
+					public Iterator<T> apply(AbstractDataWrapper<T> t) {
 						return t.getData();
 					}
 				})
@@ -74,15 +76,15 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 	}
 
 	@Override
-	public boolean add(ProtoBloomFilter pbf, T t) {
-		merge(pbf);
-		DataWrapper<T> dw = new DataWrapper<T>(pbf, t);
+	public boolean add(ProtoBloomFilter proto, T t) {
+		merge(proto);
+		AbstractDataWrapper<T> dw = new DataWrapper<T>(proto, t);
 		// get the part of the set greater than or equal to dw.
-		SortedSet<DataWrapper<T>> pwSet = buckets.tailSet(dw);
+		SortedSet<AbstractDataWrapper<T>> pwSet = buckets.tailSet(dw);
 
 		if (!pwSet.isEmpty()) {
-			DataWrapper<T> dw2 = pwSet.first();
-			if (dw2.getFilter().equals(pbf)) {
+			AbstractDataWrapper<T> dw2 = pwSet.first();
+			if (dw2.getProto().equals(proto)) {
 				dw2.add(t);
 				size++;
 				return true;
@@ -104,15 +106,15 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 	}
 
 	@Override
-	public ExtendedIterator<T> getCandidates(ProtoBloomFilter pbf) {
-		BloomFilter f = pbf.create(getConfig());
+	public ExtendedIterator<T> getCandidates(ProtoBloomFilter proto) {
+		BloomFilter f = proto.create(getConfig());
 		if (matches(f)) {
 			return WrappedIterator.createIteratorIterator(
 					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).inverseMatch(f))
-							.mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
+							.mapWith(new Function<AbstractDataWrapper<T>, Iterator<T>>() {
 
 								@Override
-								public Iterator<T> apply(DataWrapper<T> t) {
+								public Iterator<T> apply(AbstractDataWrapper<T> t) {
 									return t.getData();
 								}
 							})
@@ -130,10 +132,10 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 
 			return WrappedIterator.createIteratorIterator(
 					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).equals(bf))
-							.mapWith(new Function<DataWrapper<T>, Iterator<T>>() {
+							.mapWith(new Function<AbstractDataWrapper<T>, Iterator<T>>() {
 
 								@Override
-								public Iterator<T> apply(DataWrapper<T> t) {
+								public Iterator<T> apply(AbstractDataWrapper<T> t) {
 									return t.getData();
 								}
 							})
@@ -149,24 +151,14 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		BloomFilter bf = proto.create(getConfig());
 		boolean removed = false;
 		if (matches(bf)) {
-			Iterator<DataWrapper<T>> iter = buckets.iterator();
+			Iterator<AbstractDataWrapper<T>> iter = buckets.iterator();
 			while (iter.hasNext())
 			{
-				DataWrapper<T> wrapper = iter.next();
+				AbstractDataWrapper<T> wrapper = iter.next();
 				if (bf.match( wrapper.getFilter( getConfig() ) ))
 				{
-					Iterator<T> tIter = wrapper.getData();
-					while (tIter.hasNext())
-					{
-						T other = tIter.next();
-						if (other.equals( t ))
-						{
-							tIter.remove();
-							size--;
-							removed = true;
-						}
-					}
-					if ( ! wrapper.getData().hasNext())
+					removed = wrapper.remove(t);
+					if ( wrapper.size() == 0)
 					{
 						iter.remove();
 						collectionStats.delete();
@@ -182,4 +174,70 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		return size;
 	}
 
+	/**
+	 * An wrapper that associates a proto bloom filter with one or more data items
+	 * that have the same hash values.
+	 *
+	 * @param <T> The type of data to be wrapped.
+	 */
+	private static class DataWrapper<T> extends AbstractDataWrapper<T> {
+		// the list of data items
+		private List<T> data;
+		
+		/**
+		 * Constructor.
+		 * 
+		 * @param proto The proto bloom filter to use.
+		 * @param t     the data item to store.
+		 */
+		public DataWrapper(ProtoBloomFilter proto, T t) {
+			super( proto );
+			this.data = new ArrayList<T>();
+			this.data.add(t);
+		}
+		
+
+		/**
+		 * Get an iterator over data from this wrapper.
+		 * 
+		 * @return an iterator over data.
+		 */
+		public Iterator<T> getData() {
+			return data.iterator();
+		}
+
+		/**
+		 * the number of items that will be returned in the iterator.
+		 * 
+		 * @return The number of items fronted by this wrapper.
+		 */
+		public int size() {
+			return data.size();
+		}
+
+		/**
+		 * Add an item to the wrapper.
+		 * 
+		 * @param t A data item that matches the filter.
+		 */
+		public void add(T t) {
+			data.add(t);
+		}
+		
+		public boolean remove(T t) {
+			Iterator<T> tIter = getData();
+			boolean removed = false;
+			while (tIter.hasNext())
+			{
+				T other = tIter.next();
+				if (other.equals( t ))
+				{
+					tIter.remove();
+					removed = true;
+				}
+			}
+			return removed;
+		}
+
+	}
 }

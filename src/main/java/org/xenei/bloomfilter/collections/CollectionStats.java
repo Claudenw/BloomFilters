@@ -1,9 +1,28 @@
 package org.xenei.bloomfilter.collections;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 public class CollectionStats {
 
 	private long filterInserts;
 	private long filterDeletes;
+	
+	public static void write( CollectionStats cs, DataOutputStream oos ) throws IOException
+	{
+		oos.writeLong( cs.getInsertCount() );
+		oos.writeLong( cs.getDeleteCount() );
+		
+	}
+	
+	public static CollectionStats read( DataInputStream ois ) throws IOException
+	{
+		CollectionStats cs = new CollectionStats();
+		cs.filterInserts = ois.readLong();
+		cs.filterDeletes = ois.readLong();
+		return cs;
+	}
 	
 	public CollectionStats() {
 		filterInserts = 0;
