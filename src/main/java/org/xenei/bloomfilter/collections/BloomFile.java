@@ -42,7 +42,7 @@ import org.xenei.bloomfilter.BloomFilter;
 import org.xenei.bloomfilter.Hash;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
-import org.xenei.span.Span;
+import org.xenei.span.LongSpan;
 import org.xenei.spanbuffer.Factory;
 import org.xenei.spanbuffer.SpanBuffer;
 import org.xenei.spanbuffer.streams.SpanBufferInputStream;
@@ -118,6 +118,10 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 			sbis.skip(objlength);
 			buckets.add(bucket);
 		}
+	}
+	
+	public boolean isDirty() {
+		return dirty;
 	}
 
 	@Override
@@ -259,8 +263,9 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 	}
 
 	private static class Bucket<T> extends AbstractDataWrapper<T> {
-		int objCount;
-		SpanBuffer data;
+		private int objCount;
+		private SpanBuffer data;
+		
 
 		public Bucket(ProtoBloomFilter proto) {
 			super(proto);
@@ -276,11 +281,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 		public int size() {
 			return objCount;
 		}
-		
-		public SpanBuffer getBuffer() {
-			return data;
-		}
-
+	
 		@Override
 		public void add(T t) {
 			try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -299,14 +300,14 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 		@Override
 		public boolean remove(T t) {
 			try (SpanBufferInputStream sbis = data.getInputStream()) {
-				List<Span> spansToRemove = new ArrayList<Span>();
+				List<LongSpan> spansToRemove = new ArrayList<LongSpan>();
 				ObjectInputStream ois = new ObjectInputStream(sbis);
 				try {
 					while (true) {
 						long start = sbis.getBytesRead();
 						Object other = ois.readObject();
 						if (t.equals(other)) {
-							spansToRemove.add(Span.fromEnd(start, sbis.getBytesRead()));
+							spansToRemove.add(LongSpan.fromEnd(start, sbis.getBytesRead()));
 						}
 					}
 				} catch (EOFException expected) {
@@ -320,7 +321,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 					} else {
 						List<SpanBuffer> buffers = new ArrayList<SpanBuffer>();
 						long nxtStart = 0;
-						for (Span s : spansToRemove) {
+						for (LongSpan s : spansToRemove) {
 							if (buffers.isEmpty()) {
 								buffers.add(data.head(s.getOffset()));
 							} else {
@@ -342,8 +343,8 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 		}
 
 		private class BucketIterator<T> implements Iterator<T> {
-			int next;
-			ObjectInputStream ois;
+			private int next;
+			private ObjectInputStream ois;
 
 			BucketIterator() {
 				next = 0;
