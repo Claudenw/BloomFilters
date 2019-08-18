@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
+import org.xenei.blockstorage.FileStorage;
 import org.xenei.blockstorage.Storage;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
@@ -67,7 +68,7 @@ public class BloomStorage<T> extends AbstractBloomTable<T> {
 	public static <T> BloomStorage<T> create(int partitions, String fileName, Function<T, ProtoBloomFilter> func)
 			throws IOException {
 
-		Storage storage = new Storage(fileName);
+		Storage storage = new FileStorage(fileName);
 		SpanBuffer baseData = storage.getFirstRecord();
 		InputStream is = baseData.getInputStream();
 		DataInputStream dis = new DataInputStream(is);
