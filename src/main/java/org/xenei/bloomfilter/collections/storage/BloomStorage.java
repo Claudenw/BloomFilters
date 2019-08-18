@@ -31,12 +31,12 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
+import org.xenei.blockstorage.Storage;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.collections.BloomCollection;
 import org.xenei.bloomfilter.collections.Config;
 import org.xenei.bloomfilter.collections.AbstractBloomTable;
-import org.xenei.bloomfilter.collections.persist.Storage;
 import org.xenei.spanbuffer.SpanBuffer;
 import org.xenei.spanbuffer.streams.SpanBufferOutputStream;
 

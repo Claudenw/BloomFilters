@@ -34,11 +34,11 @@ import java.util.stream.Collectors;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
+import org.xenei.blockstorage.Storage;
 import org.xenei.bloomfilter.BloomFilter;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.collections.AbstractBloomCollection;
-import org.xenei.bloomfilter.collections.persist.Storage;
 
 /**
  * A bloom list containing items of type T for which the data are read/written
