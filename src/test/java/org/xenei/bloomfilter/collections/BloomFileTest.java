@@ -9,6 +9,7 @@ import org.xenei.bloomfilter.collections.BloomList;
 import static org.junit.Assert.*;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -36,6 +37,8 @@ public class BloomFileTest {
 
 	@Before
 	public void before() throws IOException {
+		File f = new File("/tmp/bf.tst");
+		f.delete();
 		list = BloomFile.create( "/tmp/bf.tst", filterConfig, func);
 	}
 

@@ -1,7 +1,7 @@
 package org.xenei.bloomfilter;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -15,7 +15,7 @@ import java.io.Serializable;
  *
  */
 public class FilterConfig implements Serializable {
-	
+	public static final int STORED_SIZE = 2 * Integer.BYTES;
 	private static final long serialVersionUID = 8857015449149940190L;
 	private static final double LOG_OF_2 = Math.log(2.0);
 	private static final double DENOMINATOR = Math.log(1.0 / (Math.pow(2.0, LOG_OF_2)));
@@ -28,18 +28,17 @@ public class FilterConfig implements Serializable {
 	// number of hash functions
 	private int numberOfHashFunctions;
 
-	public static void write(FilterConfig config, DataOutputStream out) throws IOException
-	{
+	public static void write(FilterConfig config, DataOutput out) throws IOException {
 		out.writeInt(config.getNumberOfItems());
 		out.writeInt(config.getProbability());
 	}
-	
-	public static FilterConfig read(DataInputStream ois) throws IOException {
+
+	public static FilterConfig read(DataInput ois) throws IOException {
 		int nItems = ois.readInt();
 		int nProb = ois.readInt();
-		return new FilterConfig( nItems, nProb );
+		return new FilterConfig(nItems, nProb);
 	}
-	
+
 	/**
 	 * A main method to generate and output the results of different constructor
 	 * arguments.
@@ -129,5 +128,5 @@ public class FilterConfig implements Serializable {
 	public int getNumberOfBytes() {
 		return Double.valueOf(Math.ceil(numberOfBits / 8.0)).intValue();
 	}
-	
+
 }

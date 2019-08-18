@@ -19,12 +19,10 @@
 package org.xenei.bloomfilter.collections;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
-import org.xenei.bloomfilter.BloomFilter;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
@@ -35,7 +33,7 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  *
  * @param <T> the data type.
  */
-public class BloomTable<T> extends AbstractBloomCollection<T> {
+public class BloomTable<T> extends AbstractBloomTable<T> {
 	private static final int PAGE_SIZE = 10000;
 	private static final int DEFAULT_BUCKETS = 5;
 	private List<BloomCollection<T>> buckets;
@@ -70,11 +68,21 @@ public class BloomTable<T> extends AbstractBloomCollection<T> {
 	 * @param func    The function to convert T instance to ProtoBloomFilters.
 	 */
 	public BloomTable(int buckets, FilterConfig config, Function<T, ProtoBloomFilter> func) {
+		this(buckets, new Config(config), func);
+	}
+
+	public BloomTable(int buckets, Config config, Function<T, ProtoBloomFilter> func) {
 		super(config, func);
 		this.buckets = new ArrayList<BloomCollection<T>>(buckets);
-		for (int i = 0; i < buckets; i++) {
-			this.buckets.add(new BloomList<T>(config, func));
+		this.buckets.add(new BloomList<T>(config.gateConfig, func));
+		for (int i = 1; i < buckets; i++) {
+			addEmptyBucket();
 		}
+	}
+
+	@Override
+	protected ExtendedIterator<BloomCollection<T>> getBuckets() {
+		return WrappedIterator.create(buckets.iterator());
 	}
 
 	/**
@@ -85,80 +93,14 @@ public class BloomTable<T> extends AbstractBloomCollection<T> {
 		buckets.clear();
 	}
 
-	/**
-	 * Put an item in the table.
-	 * 
-	 * @param t The item to put in the table.
-	 */
 	@Override
-	public boolean add(ProtoBloomFilter proto, T t) {
-		// use the bucket config not the master config.
-		merge(proto);
-		BloomFilter bf = proto.create(buckets.get(0).getConfig());
-		int minDist = bf.getHammingWeight();
-		BloomCollection<T> minList = null;
-		for (BloomCollection<T> lst : buckets) {
-			if (!lst.isFull()) {
-				int thisDist = lst.distance(bf);
-				if (minList == null || thisDist < minDist) {
-					minDist = thisDist;
-					minList = lst;
-				}
-			}
-		}
-		if (minList == null) {
-			throw new IllegalStateException("no bucket space");
-		}
-
-		try {
-			return minList.add(proto, t);
-		} finally {
-			// entry is full so add another bucket.
-			if (minList.isFull()) {
-				buckets.add(new BloomList<T>(minList.getConfig(), minList.getFunc()));
-			}
-		}
+	protected FilterConfig getBucketConfig() {
+		return buckets.get(0).getConfig();
 	}
 
 	@Override
-	public ExtendedIterator<T> iterator() {
-		return WrappedIterator
-				.createIteratorIterator(WrappedIterator.create(buckets.iterator()).mapWith(bl -> bl.iterator()));
-	}
-
-	@Override
-	public int size() {
-		return buckets.stream().mapToInt(bl -> bl.size()).sum();
-	}
-
-	@Override
-	public boolean remove(ProtoBloomFilter proto, T t) {
-		boolean removed = false;
-		Iterator<BloomCollection<T>> iter = buckets.iterator();
-		while (iter.hasNext())
-		{
-			BloomCollection<T> bloomCollection = iter.next();
-			long deleteCount = bloomCollection.getStats().getDeleteCount();
-			if (bloomCollection.remove( proto, t ))
-			{
-				long count = bloomCollection.getStats().getDeleteCount() - deleteCount;
-				getStats().delete( count );
-				removed = true;
-			}
-		}
-		return removed;
-	}
-
-	@Override
-	public ExtendedIterator<T> getCandidates(ProtoBloomFilter pbf) {
-		return WrappedIterator.createIteratorIterator(
-				WrappedIterator.create(buckets.iterator()).mapWith(bc -> bc.getCandidates(pbf)));
-	}
-
-	@Override
-	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto) {
-		return WrappedIterator.createIteratorIterator(
-				WrappedIterator.create(buckets.iterator()).mapWith(bc -> getExactMatches(proto)));
+	protected void addEmptyBucket() {
+		this.buckets.add(new BloomList<T>(getBucketConfig(), getFunc()));
 	}
 
 }

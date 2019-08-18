@@ -59,9 +59,10 @@ public interface BloomCollection<T> extends Collection<T>, BloomFilterGated {
 	 * @return an iterator over exact match data items.
 	 */
 	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto);
-	
+
 	/**
 	 * Get the collections statistics.
+	 * 
 	 * @return
 	 */
 	public CollectionStats getStats();

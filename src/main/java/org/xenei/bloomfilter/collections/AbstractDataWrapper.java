@@ -19,10 +19,7 @@
 package org.xenei.bloomfilter.collections;
 
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-
 import org.xenei.bloomfilter.BloomFilter;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
@@ -34,7 +31,7 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  * @param <T> The type of data to be wrapped.
  */
 public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataWrapper<T>> {
-	
+
 	/*
 	 * the proto bloom filter. This proto filter is the same for all the items. That
 	 * is each item generated the same proto filter.
@@ -52,16 +49,15 @@ public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataW
 	 * @param proto The proto bloom filter to use.
 	 */
 	public AbstractDataWrapper(ProtoBloomFilter proto) {
-		this.proto = proto;		
+		this.proto = proto;
 		this.bloomFilterPair = null;
 	}
-	
+
 	protected AbstractDataWrapper() {
 		this(null);
 	}
-	
-	protected void setProtoBloomFilter( ProtoBloomFilter proto )
-	{
+
+	protected void setProtoBloomFilter(ProtoBloomFilter proto) {
 		this.proto = proto;
 	}
 
@@ -96,6 +92,7 @@ public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataW
 	 * @return an iterator over data.
 	 */
 	abstract public Iterator<T> getData();
+
 	/**
 	 * the number of items that will be returned in the iterator.
 	 * 
@@ -109,7 +106,7 @@ public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataW
 	 * @param t A data item that matches the filter.
 	 */
 	abstract public void add(T t);
-	
+
 	abstract public boolean remove(T t);
 
 	@Override

@@ -1,5 +1,6 @@
 package org.xenei.bloomfilter;
 
+import java.io.Serializable;
 import java.util.BitSet;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -12,7 +13,11 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * configuration.
  *
  */
-public class Hash implements Comparable<Hash> {
+public class Hash implements Comparable<Hash>, Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5511398264986350484L;
 	private long h1;
 	private long h2;
 	private transient Integer hashCode;
@@ -33,14 +38,12 @@ public class Hash implements Comparable<Hash> {
 		}
 		return set;
 	}
-	
-	public long h1()
-	{
+
+	public long h1() {
 		return h1;
 	}
-	
-	public long h2()
-	{
+
+	public long h2() {
 		return h2;
 	}
 
@@ -70,10 +73,10 @@ public class Hash implements Comparable<Hash> {
 		}
 		return false;
 	}
-	
+
 	@Override
 	public String toString() {
-		return String.format( "Hash[ %s %s ]", Long.toHexString(h1), Long.toHexString(h2));
+		return String.format("Hash[ %s %s ]", Long.toHexString(h1), Long.toHexString(h2));
 	}
 
 }

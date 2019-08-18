@@ -210,6 +210,7 @@ public class BloomFilter {
 
 	/**
 	 * Return the filter as a bitset.
+	 * 
 	 * @return the bit set representation.
 	 */
 	public BitSet asBitSet() {

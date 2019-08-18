@@ -152,16 +152,13 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		boolean removed = false;
 		if (matches(bf)) {
 			Iterator<AbstractDataWrapper<T>> iter = buckets.iterator();
-			while (iter.hasNext())
-			{
+			while (iter.hasNext()) {
 				AbstractDataWrapper<T> wrapper = iter.next();
-				if (bf.match( wrapper.getFilter( getConfig() ) ))
-				{
+				if (bf.match(wrapper.getFilter(getConfig()))) {
 					removed = wrapper.remove(t);
-					if ( wrapper.size() == 0)
-					{
+					if (wrapper.size() == 0) {
 						iter.remove();
-						collectionStats.delete();
+						config.collectionStats.delete();
 					}
 				}
 			}
@@ -183,7 +180,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 	private static class DataWrapper<T> extends AbstractDataWrapper<T> {
 		// the list of data items
 		private List<T> data;
-		
+
 		/**
 		 * Constructor.
 		 * 
@@ -191,17 +188,17 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		 * @param t     the data item to store.
 		 */
 		public DataWrapper(ProtoBloomFilter proto, T t) {
-			super( proto );
+			super(proto);
 			this.data = new ArrayList<T>();
 			this.data.add(t);
 		}
-		
 
 		/**
 		 * Get an iterator over data from this wrapper.
 		 * 
 		 * @return an iterator over data.
 		 */
+		@Override
 		public Iterator<T> getData() {
 			return data.iterator();
 		}
@@ -211,6 +208,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		 * 
 		 * @return The number of items fronted by this wrapper.
 		 */
+		@Override
 		public int size() {
 			return data.size();
 		}
@@ -220,18 +218,18 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 		 * 
 		 * @param t A data item that matches the filter.
 		 */
+		@Override
 		public void add(T t) {
 			data.add(t);
 		}
-		
+
+		@Override
 		public boolean remove(T t) {
 			Iterator<T> tIter = getData();
 			boolean removed = false;
-			while (tIter.hasNext())
-			{
+			while (tIter.hasNext()) {
 				T other = tIter.next();
-				if (other.equals( t ))
-				{
+				if (other.equals(t)) {
 					tIter.remove();
 					removed = true;
 				}

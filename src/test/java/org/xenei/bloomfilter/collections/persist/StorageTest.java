@@ -21,10 +21,10 @@ public class StorageTest {
 		
 		System.out.println( storage.stats() );
 		
-		long first = storage.write( Factory.wrap( "Hello world" ));
+		long first = storage.append( Factory.wrap( "Hello world" ));
 		System.out.println( storage.stats() );
 
-		long second = storage.write( Factory.wrap( "Goodbye cruel world" ));
+		long second = storage.append( Factory.wrap( "Goodbye cruel world" ));
 		System.out.println( storage.stats() );
 
 		SpanBuffer f = storage.read( first );
@@ -38,7 +38,7 @@ public class StorageTest {
 		storage.delete( first );
 		System.out.println( storage.stats() );
 		
-		long third = storage.write( Factory.wrap( "Hello again"));
+		long third = storage.append( Factory.wrap( "Hello again"));
 		assertEquals( first, third );
 		System.out.println( storage.stats() );
 		

@@ -17,6 +17,7 @@
  */
 package org.xenei.bloomfilter;
 
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.Iterator;
@@ -32,8 +33,12 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  *
  *
  */
-public class ProtoBloomFilter implements Comparable<ProtoBloomFilter> {
+public class ProtoBloomFilter implements Comparable<ProtoBloomFilter>, Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1293273984765868571L;
 	private Set<Hash> hashes;
 	private transient Integer hashCode;
 

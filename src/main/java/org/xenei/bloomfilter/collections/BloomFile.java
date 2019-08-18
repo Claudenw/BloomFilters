@@ -64,7 +64,6 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 	public static <T> BloomFile<T> create(String fileName, FilterConfig config, Function<T, ProtoBloomFilter> func)
 			throws IOException {
 
-		
 		SpanBuffer buffer = null;
 		try {
 			buffer = org.xenei.spanbuffer.Factory.wrapFile(fileName);
@@ -76,8 +75,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 		} else {
 			try (SpanBufferInputStream sbis = buffer.getInputStream();
 					DataInputStream dis = new DataInputStream(sbis)) {
-				AbstractBloomCollection.Config cfg = AbstractBloomCollection.read(dis);
-				return new BloomFile<T>(cfg, func, sbis, dis);
+				return new BloomFile<T>(func, sbis, dis);
 			}
 		}
 	}
@@ -94,9 +92,9 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 	 * @param config The Filter Configuration.
 	 * @param func   A function for converting <T> objects into ProtoBloomFilters.
 	 */
-	private BloomFile(AbstractBloomCollection.Config cfg, Function<T, ProtoBloomFilter> func,
-			SpanBufferInputStream sbis, DataInputStream dis) throws IOException {
-		super(cfg.gateConfig, func, cfg.gate, cfg.collectionStats);
+	private BloomFile(Function<T, ProtoBloomFilter> func, SpanBufferInputStream sbis, DataInputStream dis)
+			throws IOException {
+		super(Config.read(dis), func);
 		this.dirty = false;
 		this.size = dis.readInt();
 		int bucketCount = dis.readInt();
@@ -119,27 +117,24 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 			buckets.add(bucket);
 		}
 	}
-	
+
 	public boolean isDirty() {
 		return dirty;
 	}
 
-	@Override
 	public void write(DataOutputStream oos) throws IOException {
-		super.write( oos );
-		oos.writeInt( this.size );
-		oos.writeInt( this.buckets.size() );
-		for (Bucket<T> bucket : buckets )
-		{
-			oos.writeInt( bucket.getProto().getHashes().size());
-			oos.writeInt( bucket.objCount );			
-			oos.writeInt( (int) bucket.data.getLength() );
-			for (Hash hash : bucket.getProto().getHashes())
-			{
-				oos.writeLong( hash.h1() );
-				oos.writeLong( hash.h2() );
+		config.write(oos);
+		oos.writeInt(this.size);
+		oos.writeInt(this.buckets.size());
+		for (Bucket<T> bucket : buckets) {
+			oos.writeInt(bucket.getProto().getHashes().size());
+			oos.writeInt(bucket.objCount);
+			oos.writeInt((int) bucket.data.getLength());
+			for (Hash hash : bucket.getProto().getHashes()) {
+				oos.writeLong(hash.h1());
+				oos.writeLong(hash.h2());
 			}
-			IOUtils.copy( bucket.data.getInputStream(), oos);
+			IOUtils.copy(bucket.data.getInputStream(), oos);
 		}
 		dirty = false;
 	}
@@ -248,7 +243,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 					removed = wrapper.remove(t);
 					if (wrapper.size() == 0) {
 						iter.remove();
-						collectionStats.delete();
+						config.collectionStats.delete();
 					}
 				}
 			}
@@ -265,7 +260,6 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 	private static class Bucket<T> extends AbstractDataWrapper<T> {
 		private int objCount;
 		private SpanBuffer data;
-		
 
 		public Bucket(ProtoBloomFilter proto) {
 			super(proto);
@@ -274,14 +268,14 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 		@Override
 		public Iterator<T> getData() {
-			return new BucketIterator<T>();
+			return new BucketIterator();
 		}
 
 		@Override
 		public int size() {
 			return objCount;
 		}
-	
+
 		@Override
 		public void add(T t) {
 			try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -342,7 +336,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 			}
 		}
 
-		private class BucketIterator<T> implements Iterator<T> {
+		private class BucketIterator implements Iterator<T> {
 			private int next;
 			private ObjectInputStream ois;
 
@@ -355,21 +349,19 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 			public boolean hasNext() {
 				return next < objCount;
 			}
-			
-			
 
+			@SuppressWarnings("unchecked")
 			@Override
 			public T next() {
 				if (hasNext()) {
 					next++;
-					if (ois == null)
-					{
+					if (ois == null) {
 						try {
 							ois = new ObjectInputStream(data.getInputStream());
 						} catch (IOException e) {
 							throw new IllegalStateException(e);
 						}
-					
+
 					}
 					try {
 						return (T) ois.readObject();

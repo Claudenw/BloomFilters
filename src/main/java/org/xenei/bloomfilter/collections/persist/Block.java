@@ -9,17 +9,15 @@ public class Block implements Comparable<Block> {
 	Block next;
 	ByteBuffer buffer;
 
-	Block( long start, int length )
-	{
+	Block(long start, int length) {
 		pos = LongSpan.fromLength(start, length);
 		next = null;
-		buffer = ByteBuffer.allocate( length );
+		buffer = ByteBuffer.allocate(length);
 	}
 
 	@Override
 	public int compareTo(Block arg0) {
-		return Long.compare(this.pos.getOffset(), arg0.pos.getOffset() );
+		return Long.compare(this.pos.getOffset(), arg0.pos.getOffset());
 	}
-	
-	
+
 }
