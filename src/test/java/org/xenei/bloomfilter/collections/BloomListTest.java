@@ -1,6 +1,6 @@
 package org.xenei.bloomfilter.collections;
 
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.ProtoBloomFilterBuilder;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
@@ -112,7 +112,7 @@ public class BloomListTest {
 	public void matchesTest() throws IOException {
 		String[] str = { "one", "two", "three", "four", "five" };
 		ProtoBloomFilter filters[] = new ProtoBloomFilter[str.length];
-		BloomFilter bf[] = new BloomFilter[str.length];
+		BloomFilterImpl bf[] = new BloomFilterImpl[str.length];
 		for (int i = 0; i < str.length; i++) {
 			filters[i] = builder.update(str[i]).build();
 			bf[i] = filters[i].create(filterConfig);
@@ -147,7 +147,7 @@ public class BloomListTest {
 	@Test
 	public void distanceTest() throws IOException {
 		ProtoBloomFilter pbf = builder.update("one").build();
-		BloomFilter bf = pbf.create(filterConfig);
+		BloomFilterImpl bf = pbf.create(filterConfig);
 
 		assertEquals(bf.getHammingWeight(), list.distance(pbf));
 		assertEquals(bf.getHammingWeight(), list.distance(bf));

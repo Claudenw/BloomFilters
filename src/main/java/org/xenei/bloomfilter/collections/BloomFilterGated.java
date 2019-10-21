@@ -1,11 +1,11 @@
 package org.xenei.bloomfilter.collections;
 
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
 public interface BloomFilterGated {
 
-	public BloomFilter getGate();
+	public BloomFilterImpl getGate();
 
 	/**
 	 * Return true if this bloom filter is full. A full bloom filter is one that has
@@ -24,7 +24,7 @@ public interface BloomFilterGated {
 	 * @param f The filter to calculate distance to.
 	 * @return the distance
 	 */
-	public int distance(BloomFilter f);
+	public int distance(BloomFilterImpl f);
 
 	/**
 	 * Calculates the hamming distance to a proto filter.
@@ -40,7 +40,7 @@ public interface BloomFilterGated {
 	 * @param filter The filter to look for.
 	 * @return true if this list contains the filter.
 	 */
-	public boolean matches(BloomFilter filter);
+	public boolean matches(BloomFilterImpl filter);
 
 	/**
 	 * Returns true if pbf is found in this list.
@@ -64,6 +64,6 @@ public interface BloomFilterGated {
 	 * @param bf the bloom filter to check.
 	 * @return true if the bloom filter contains the gate for this list.
 	 */
-	public boolean inverseMatch(BloomFilter bf);
+	public boolean inverseMatch(BloomFilterImpl bf);
 
 }

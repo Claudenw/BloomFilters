@@ -1,5 +1,6 @@
 package org.xenei.bloomfilter.collections;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.function.Function;
 

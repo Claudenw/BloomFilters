@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -32,18 +33,18 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.Hash;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.span.LongSpan;
-import org.xenei.spanbuffer.Factory;
 import org.xenei.spanbuffer.SpanBuffer;
 import org.xenei.spanbuffer.streams.SpanBufferInputStream;
 
@@ -68,7 +69,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 		try {
 			buffer = org.xenei.spanbuffer.Factory.wrapFile(fileName);
 		} catch (FileNotFoundException expected) {
-			buffer = Factory.EMPTY;
+			buffer = org.xenei.spanbuffer.Factory.EMPTY;
 		}
 		if (buffer.getLength() == 0) {
 			return new BloomFile<T>(config, func);
@@ -192,7 +193,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getCandidates(ProtoBloomFilter proto) {
-		BloomFilter f = proto.create(getConfig());
+		BloomFilterImpl f = proto.create(getConfig());
 		if (matches(f)) {
 			return WrappedIterator.createIteratorIterator(
 					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).inverseMatch(f))
@@ -212,7 +213,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		if (matches(bf)) {
 
 			return WrappedIterator.createIteratorIterator(
@@ -233,7 +234,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		boolean removed = false;
 		if (matches(bf)) {
 			Iterator<Bucket<T>> iter = buckets.iterator();
@@ -263,7 +264,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 		public Bucket(ProtoBloomFilter proto) {
 			super(proto);
-			data = Factory.EMPTY;
+			data = org.xenei.spanbuffer.Factory.EMPTY;
 		}
 
 		@Override
@@ -283,8 +284,8 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 					ObjectOutputStream oos = new ObjectOutputStream(baos);) {
 				oos.writeObject(t);
 				oos.flush();
-				SpanBuffer sb = Factory.wrap(baos.toByteArray());
-				data = Factory.merge(data, sb);
+				SpanBuffer sb = org.xenei.spanbuffer.Factory.wrap(baos.toByteArray());
+				data = org.xenei.spanbuffer.Factory.merge(data, sb);
 				objCount++;
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
@@ -311,7 +312,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 					objCount -= spansToRemove.size();
 					if (objCount <= 0) {
 						objCount = 0;
-						data = Factory.EMPTY;
+						data = org.xenei.spanbuffer.Factory.EMPTY;
 					} else {
 						List<SpanBuffer> buffers = new ArrayList<SpanBuffer>();
 						long nxtStart = 0;
@@ -326,7 +327,7 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 						if (nxtStart < data.getLength()) {
 							buffers.add(data.safeTail(nxtStart));
 						}
-						data = Factory.merge(buffers.iterator());
+						data = org.xenei.spanbuffer.Factory.merge(buffers.iterator());
 					}
 					return true;
 				}
@@ -376,5 +377,28 @@ public class BloomFile<T> extends AbstractBloomCollection<T> {
 
 		}
 
+	}
+	
+	public static class Factory<T> implements BloomCollectionFactory<T> {
+
+		private File baseDir;
+		
+		public Factory( File baseDir ) {
+			boolean ok = (baseDir.exists() && baseDir.isDirectory()) ||
+					(!baseDir.exists());
+			if (!ok) {
+				throw new IllegalArgumentException("baseDir must either exist as a directory or not exist at all");
+			}
+			if (!baseDir.exists()) {
+				baseDir.mkdirs();
+			}
+			this.baseDir = baseDir;
+		}
+		
+		@Override
+		public BloomFile<T> getCollection(FilterConfig config, Function<T, ProtoBloomFilter> func) throws IOException {
+			return create(String.format( "%s/%s",baseDir.getAbsolutePath(), UUID.randomUUID()), config, func);
+		}
+		
 	}
 }

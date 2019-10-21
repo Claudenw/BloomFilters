@@ -17,6 +17,7 @@
  */
 package org.xenei.bloomfilter.collections;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
@@ -107,7 +108,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getCandidates(ProtoBloomFilter proto) {
-		BloomFilter f = proto.create(getConfig());
+		BloomFilterImpl f = proto.create(getConfig());
 		if (matches(f)) {
 			return WrappedIterator.createIteratorIterator(
 					WrappedIterator.create(buckets.iterator()).filterKeep(b -> b.getFilter(getConfig()).inverseMatch(f))
@@ -127,7 +128,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		if (matches(bf)) {
 
 			return WrappedIterator.createIteratorIterator(
@@ -148,7 +149,7 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		boolean removed = false;
 		if (matches(bf)) {
 			Iterator<AbstractDataWrapper<T>> iter = buckets.iterator();
@@ -237,5 +238,15 @@ public class BloomList<T> extends AbstractBloomCollection<T> {
 			return removed;
 		}
 
+	}
+	
+	public static class Factory<T> implements BloomCollectionFactory<T> {
+
+		@Override
+		public BloomList<T> getCollection(FilterConfig config, Function<T, ProtoBloomFilter> func)
+				throws IOException {
+			return new BloomList<T>(config, func);
+		}
+		
 	}
 }

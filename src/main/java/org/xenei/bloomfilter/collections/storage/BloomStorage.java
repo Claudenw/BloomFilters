@@ -98,6 +98,10 @@ public class BloomStorage<T> extends AbstractBloomTable<T> {
 	private static Config read(Storage storage, FilterConfig config) throws IOException {
 		try {
 			SpanBuffer baseData = storage.getFirstRecord();
+			if (baseData.getLength() ==0)
+			{
+				return new Config(config);
+			}
 			InputStream is = baseData.getInputStream();
 			DataInputStream dis = new DataInputStream(is);
 			return Config.read(dis);
@@ -145,8 +149,9 @@ public class BloomStorage<T> extends AbstractBloomTable<T> {
 	}
 
 	private void write(Config cfg) {
-		SpanBufferOutputStream sbos = new SpanBufferOutputStream();
-		try (DataOutputStream dos = new DataOutputStream(sbos);) {
+		
+		try (SpanBufferOutputStream sbos = new SpanBufferOutputStream();
+				DataOutputStream dos = new DataOutputStream(sbos);) {
 			cfg.write(dos);
 			List<Long> lst = buckets.stream().map(BloomStorageList::getPosition).collect(Collectors.toList());
 			Collections.sort(lst);
@@ -155,7 +160,6 @@ public class BloomStorage<T> extends AbstractBloomTable<T> {
 				dos.writeLong(l);
 			}
 			dos.flush();
-			dos.close();
 			storage.setFirstRecord(sbos.getSpanBuffer());
 		} catch (IOException e) {
 			throw new IllegalStateException(e);

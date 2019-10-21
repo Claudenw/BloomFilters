@@ -18,6 +18,7 @@
 
 package org.xenei.bloomfilter.collections;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -34,47 +35,133 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  * @param <T> the data type.
  */
 public class BloomTable<T> extends AbstractBloomTable<T> {
-	private static final int PAGE_SIZE = 10000;
-	private static final int DEFAULT_BUCKETS = 5;
 	private List<BloomCollection<T>> buckets;
-
+	private final BloomCollectionFactory<T> factory;
+	
 	/**
-	 * Default constructor. Creates a bloom table with a page size of 10000 and 5
-	 * buckets.
+	 * Builder for BloomTables.
 	 *
-	 * @param func The function to convert T instance to ProtoBloomFilters.
+	 * @param <T> the data type being stored in the table.
 	 */
-	public BloomTable(Function<T, ProtoBloomFilter> func) {
-		this(DEFAULT_BUCKETS, PAGE_SIZE, func);
+	public static class Builder<T> {
+		private static final int PAGE_SIZE = 10000;
+		private static final int DEFAULT_BUCKETS = 5;
+		
+		private int pageCount = DEFAULT_BUCKETS;
+		private int pageSize = PAGE_SIZE;
+		private Function<T, ProtoBloomFilter> func;
+		private Integer probability = null;
+		private BloomCollectionFactory<T> factory;
+		
+		/**
+		 * Set the minimum number of active pages.  This is the number of active containers that will hold objects.
+		 * If a page fills up a new one will be created.
+		 * <p>Default = 5</p>
+		 * @param pageCount the number of buckets.
+		 * @return this for chaining
+		 */
+		public Builder<T> setPageCount( int pageCount ) {
+			if (pageCount < 1)
+			{
+				throw new IllegalArgumentException( "Page count must be greater than 0");
+			}
+			this.pageCount = pageCount;
+			return this;
+		}
+		
+		/**
+		 * Set the page size.  This is the number of objects that are stored in a page.
+		 * <p>Default = 10000</p>
+		 * @param pageSize
+		 * @return this for chaining
+		 */
+		public Builder<T> setPageSize( int pageSize )
+		{
+			if (pageSize <= 2)
+			{
+				throw new IllegalArgumentException( "PageSize must be greater than 2");
+			}			
+			this.pageSize = pageSize;
+			return this;
+		}
+
+		/**
+		 * Set the function for converting T objects to ProtoBloomFilters.
+		 * @param func the function.
+		 * @return this for chaining
+		 */
+		public Builder<T> setFunc( Function<T, ProtoBloomFilter> func )
+		{
+			this.func = func;
+			return this;
+		}
+
+		/**
+		 * Set the probability as 1/probability.  This is the requested probability of collision in the bloom filters.
+		 * <p>Default = Square root of the pageSize (default page size yeilds 100)</p> 
+		 * @param probability the probability.
+		 * @return this for chaining.
+		 */
+		public Builder<T> setProbability( int probability) {
+			if (probability <= 0)
+			{
+				throw new IllegalArgumentException( "probability must be greater than 0");
+			}
+			this.probability = probability;
+			return this;
+		}
+		
+		/**
+		 * Use a FilterConfig to configure the probability and page size.
+		 * @param config the FilterConfig to use the probability and pageSize from. 
+		 * @return this for chaining.
+		 */
+		public Builder<T> setConfig( FilterConfig config ) {
+			probability = config.getProbability();
+			pageSize = config.getNumberOfItems();
+			return this;
+		}
+
+		/**
+		 * Set the BloomCollectionFactory.  This factory is used to create pages as needed.
+		 * @param factory the factory to use to create pages.
+		 * @return this for chaining.
+		 */
+		public Builder<T> setFactory( BloomCollectionFactory<T> factory )
+		{
+			this.factory = factory;
+			return this;
+		}
+		
+		/**
+		 * Build a bloom table.
+		 * @return A bloom table.
+		 * @throws IOException on error.
+		 */
+		public BloomTable<T> build() throws IOException {
+			if (func == null) {
+				throw new  IllegalStateException("Function must be provided");
+			}
+			if (factory == null) {
+				throw new  IllegalStateException("Factory must be provided");
+			}
+			if (probability == null)
+			{
+				probability = Double.valueOf(Math.ceil(Math.sqrt(pageSize))).intValue();
+			}
+			Config config = new Config( new FilterConfig( pageSize, probability ));
+			
+			return new BloomTable<T>(pageCount, config, func,  factory);
+
+		}
 	}
 
-	/**
-	 * Create a table with the specified pageSize. the collision rate is calculated
-	 * as 1/sqrt(pageSize)
-	 * 
-	 * @param buckets  the number of buckets to start with.
-	 * @param pageSize the page size for each bucket.
-	 * @param func     The function to convert T instance to ProtoBloomFilters.
-	 */
-	public BloomTable(int buckets, int pageSize, Function<T, ProtoBloomFilter> func) {
-		this(buckets, new FilterConfig(pageSize, Double.valueOf(Math.ceil(Math.sqrt(pageSize))).intValue()), func);
-	}
-
-	/**
-	 * Create a table with the specified parameters.
-	 *
-	 * @param buckets the number of buckets to start with.
-	 * @param config  The Filter configuration.
-	 * @param func    The function to convert T instance to ProtoBloomFilters.
-	 */
-	public BloomTable(int buckets, FilterConfig config, Function<T, ProtoBloomFilter> func) {
-		this(buckets, new Config(config), func);
-	}
-
-	public BloomTable(int buckets, Config config, Function<T, ProtoBloomFilter> func) {
+	private BloomTable(int buckets, Config config, Function<T, ProtoBloomFilter> func,  BloomCollectionFactory<T> factory) throws IOException {
 		super(config, func);
+		this.factory = factory;
 		this.buckets = new ArrayList<BloomCollection<T>>(buckets);
-		this.buckets.add(new BloomList<T>(config.gateConfig, func));
+		// must be one bucket.
+		this.buckets.add( factory.getCollection(config.gateConfig, func));
 		for (int i = 1; i < buckets; i++) {
 			addEmptyBucket();
 		}
@@ -99,8 +186,8 @@ public class BloomTable<T> extends AbstractBloomTable<T> {
 	}
 
 	@Override
-	protected void addEmptyBucket() {
-		this.buckets.add(new BloomList<T>(getBucketConfig(), getFunc()));
+	protected void addEmptyBucket() throws IOException {
+		this.buckets.add( factory.getCollection(getBucketConfig(), getFunc()));
 	}
 
 }

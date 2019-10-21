@@ -1,9 +1,10 @@
 package org.xenei.bloomfilter.collections;
 
+import java.io.IOException;
 import java.util.AbstractCollection;
 import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
@@ -91,7 +92,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	}
 
 	@Override
-	public final BloomFilter getGate() {
+	public final BloomFilterImpl getGate() {
 		return this.config.getGate();
 	}
 
@@ -101,7 +102,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	}
 
 	@Override
-	public final int distance(BloomFilter f) {
+	public final int distance(BloomFilterImpl f) {
 		return this.config.getGate().distance(f);
 	}
 
@@ -111,7 +112,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	}
 
 	@Override
-	public final boolean matches(BloomFilter filter) {
+	public final boolean matches(BloomFilterImpl filter) {
 		return this.config.getGate().inverseMatch(filter);
 	}
 
@@ -126,7 +127,7 @@ public abstract class AbstractBloomCollection<T> extends AbstractCollection<T> i
 	}
 
 	@Override
-	public final boolean inverseMatch(BloomFilter bf) {
+	public final boolean inverseMatch(BloomFilterImpl bf) {
 		return this.config.getGate().inverseMatch(bf);
 	}
 

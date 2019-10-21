@@ -26,8 +26,10 @@ public class BloomTableTest {
 	};
 	
 	@Before
-	public void before() {
-		list = new BloomTable<String>(func);
+	public void before() throws IOException {
+		list = new BloomTable.Builder<String>()
+				.setFunc( func ).setFactory( new BloomList.Factory<String>() )
+				.build();
 	}
 
 	@Test

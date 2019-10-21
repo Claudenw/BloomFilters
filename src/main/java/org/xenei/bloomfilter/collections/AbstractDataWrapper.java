@@ -20,7 +20,7 @@ package org.xenei.bloomfilter.collections;
 
 import java.lang.ref.SoftReference;
 import java.util.Iterator;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
@@ -76,7 +76,7 @@ public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataW
 	 * @param config the configuration for the filter.
 	 * @return the bloom filter
 	 */
-	public final BloomFilter getFilter(FilterConfig config) {
+	public final BloomFilterImpl getFilter(FilterConfig config) {
 		BloomFilterPair bfp = (bloomFilterPair == null) ? null : bloomFilterPair.get();
 		if (bfp != null && bfp.config.equals(config)) {
 			return bfp.bloomFilter;
@@ -136,7 +136,7 @@ public abstract class AbstractDataWrapper<T> implements Comparable<AbstractDataW
 	 *
 	 */
 	private class BloomFilterPair {
-		BloomFilter bloomFilter;
+		BloomFilterImpl bloomFilter;
 		FilterConfig config;
 
 		BloomFilterPair(FilterConfig config) {

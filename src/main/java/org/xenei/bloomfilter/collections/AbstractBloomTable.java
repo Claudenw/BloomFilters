@@ -18,11 +18,12 @@
 
 package org.xenei.bloomfilter.collections;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.function.Function;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.Utils;
@@ -78,7 +79,7 @@ public abstract class AbstractBloomTable<T> extends AbstractBloomCollection<T> {
 
 	protected abstract FilterConfig getBucketConfig();
 
-	protected abstract void addEmptyBucket();
+	protected abstract void addEmptyBucket() throws IOException;
 
 	/**
 	 * Put an item in the table.
@@ -89,7 +90,7 @@ public abstract class AbstractBloomTable<T> extends AbstractBloomCollection<T> {
 	public boolean add(ProtoBloomFilter proto, T t) {
 		// use the bucket config not the master config.
 		merge(proto);
-		BloomFilter bf = proto.create(getBucketConfig());
+		BloomFilterImpl bf = proto.create(getBucketConfig());
 		int minDist = bf.getHammingWeight();
 		BloomCollection<T> minList = null;
 		Iterator<BloomCollection<T>> iter = getBuckets();
@@ -112,7 +113,11 @@ public abstract class AbstractBloomTable<T> extends AbstractBloomCollection<T> {
 		} finally {
 			// entry is full so add another bucket.
 			if (minList.isFull()) {
-				addEmptyBucket();
+				try {
+					addEmptyBucket();
+				} catch (IOException e) {
+					throw new IllegalStateException( e );
+				}
 			}
 		}
 	}

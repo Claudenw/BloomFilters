@@ -17,6 +17,7 @@
  */
 package org.xenei.bloomfilter.collections.storage;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
@@ -27,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,10 +37,12 @@ import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.util.iterator.WrappedIterator;
 import org.xenei.blockstorage.Storage;
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 import org.xenei.bloomfilter.collections.AbstractBloomCollection;
+import org.xenei.bloomfilter.collections.BloomCollectionFactory;
+import org.xenei.bloomfilter.collections.BloomFile;
 
 /**
  * A bloom list containing items of type T for which the data are read/written
@@ -78,8 +82,14 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 			throws IOException, ClassNotFoundException {
 		super(config, func);
 		this.storage = storage;
-		this.position = position;
-		this.protos = (TreeSet<DataPointer>) storage.readObject(position);
+		if (position == 0)
+		{
+			this.protos = new TreeSet<DataPointer>();
+			this.position = storage.append( protos );
+		} else {
+			this.position = position;
+			this.protos = (TreeSet<DataPointer>) storage.readObject(this.position);			
+		}
 		this.size = protos.stream().mapToInt(DataPointer::size).sum();
 	}
 
@@ -170,7 +180,7 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getCandidates(ProtoBloomFilter proto) {
-		BloomFilter f = proto.create(getConfig());
+		BloomFilterImpl f = proto.create(getConfig());
 		if (matches(f)) {
 			return WrappedIterator.createIteratorIterator(WrappedIterator.create(protos.iterator())
 					.filterKeep(dp -> dp.getFilter(getConfig()).inverseMatch(f)).mapWith(DataPointer::iterator));
@@ -181,7 +191,7 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public ExtendedIterator<T> getExactMatches(ProtoBloomFilter proto) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		if (matches(bf)) {
 
 			return WrappedIterator.createIteratorIterator(WrappedIterator.create(protos.iterator())
@@ -193,7 +203,7 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 
 	@Override
 	public boolean remove(ProtoBloomFilter proto, T t) {
-		BloomFilter bf = proto.create(getConfig());
+		BloomFilterImpl bf = proto.create(getConfig());
 		if (matches(bf)) {
 			// use int[] to make final for accumulator below.
 			final long[] removedCount = new long[1];
@@ -240,7 +250,7 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 			return proto;
 		}
 
-		public BloomFilter getFilter(FilterConfig config) {
+		public BloomFilterImpl getFilter(FilterConfig config) {
 			return proto.create(config);
 		}
 
@@ -314,5 +324,25 @@ public class BloomStorageList<T> extends AbstractBloomCollection<T> {
 			return proto.compareTo(other.proto);
 		}
 
+	}
+	
+	public static class Factory<T> implements BloomCollectionFactory<T> {
+
+		private Storage storage;
+		
+		public Factory( Storage storage ) {			
+			this.storage=storage;
+		}
+		
+		@Override
+		public BloomStorageList<T> getCollection(FilterConfig config, Function<T, ProtoBloomFilter> func) throws IOException {
+			long position = storage.append( org.xenei.spanbuffer.Factory.EMPTY);
+			try {
+				return new BloomStorageList<T>(storage, position, config, func);
+			} catch (ClassNotFoundException e) {
+				throw new IllegalStateException( e );
+			}
+		}
+		
 	}
 }

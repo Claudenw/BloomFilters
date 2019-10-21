@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.function.Consumer;
 
-import org.xenei.bloomfilter.BloomFilter;
+import org.xenei.bloomfilter.BloomFilterImpl;
 import org.xenei.bloomfilter.FilterConfig;
 import org.xenei.bloomfilter.ProtoBloomFilter;
 
@@ -17,7 +17,7 @@ import org.xenei.bloomfilter.ProtoBloomFilter;
  */
 public class Config {
 	public final FilterConfig gateConfig;
-	private BloomFilter gate;
+	private BloomFilterImpl gate;
 	public CollectionStats collectionStats;
 	private Consumer<Config> changeNotification;
 
@@ -25,7 +25,7 @@ public class Config {
 		Config cfg = new Config(FilterConfig.read(stream));
 		byte[] bitBuffer = new byte[cfg.gateConfig.getNumberOfBytes()];
 		stream.read(bitBuffer);
-		cfg.gate = new BloomFilter(BitSet.valueOf(bitBuffer));
+		cfg.gate = new BloomFilterImpl(BitSet.valueOf(bitBuffer));
 		cfg.collectionStats = CollectionStats.read(stream);
 		cfg.collectionStats.addConsumer(cfg.new Notifier());
 		return cfg;
@@ -43,7 +43,7 @@ public class Config {
 
 	public Config(FilterConfig gateConfig) {
 		this.gateConfig = gateConfig;
-		this.gate = new BloomFilter(gateConfig);
+		this.gate = new BloomFilterImpl(gateConfig);
 		this.collectionStats = new CollectionStats();
 		collectionStats.addConsumer(new Notifier());
 	}
@@ -63,12 +63,12 @@ public class Config {
 		}
 	}
 
-	public BloomFilter getGate() {
+	public BloomFilterImpl getGate() {
 		return gate;
 	}
 
 	public synchronized void merge(ProtoBloomFilter proto) {
-		BloomFilter other = proto.create(gateConfig);
+		BloomFilterImpl other = proto.create(gateConfig);
 		if (!gate.inverseMatch(other)) {
 			gate = gate.merge(other);
 		}
@@ -80,7 +80,7 @@ public class Config {
 	}
 
 	public void clear() {
-		gate = new BloomFilter(gateConfig);
+		gate = new BloomFilterImpl(gateConfig);
 		collectionStats.clear();
 	}
 
