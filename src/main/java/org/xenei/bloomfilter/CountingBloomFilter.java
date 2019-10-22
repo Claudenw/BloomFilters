@@ -18,19 +18,21 @@
 package org.xenei.bloomfilter;
 
 import java.nio.LongBuffer;
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.xenei.bloomfilter.hasher.Hasher;
 
 /**
  * A counting Bloom filter.
@@ -41,7 +43,7 @@ import org.xenei.bloomfilter.hasher.Hasher;
  *
  * @since 4.5
  */
-public class CountingBloomFilter implements BloomFilter {
+public class CountingBloomFilter extends BloomFilter {
 
 
     /**
@@ -50,8 +52,6 @@ public class CountingBloomFilter implements BloomFilter {
      */
     private final TreeMap<Integer, Integer> counts;
 
-    private final Shape shape;
-
     /**
      * Constructor.
      *
@@ -59,13 +59,12 @@ public class CountingBloomFilter implements BloomFilter {
      * @param config the Filter configuration to use to build the Bloom filter.
      */
     public CountingBloomFilter(Hasher hasher, Shape shape) {
+        super(shape);
         if (!hasher.getName().equals( shape.getHasherName() ))
         {
             throw new IllegalArgumentException(
                     String.format("Hasher names do not match %s != %s", hasher.getName(), shape.getHasherName()));
         }
-
-        this.shape = shape;
 
         counts = new TreeMap<Integer, Integer>();
         Set<Integer> idxs = new HashSet<Integer>();
@@ -74,7 +73,7 @@ public class CountingBloomFilter implements BloomFilter {
         {
             idxs.add( iter.next() );
         }
-        idxs.parallelStream().forEach( idx -> counts.put(idx, 1));
+        idxs.stream().forEach( idx -> counts.put(idx, 1));
     }
 
 
@@ -100,8 +99,8 @@ public class CountingBloomFilter implements BloomFilter {
      * @param counts the Map of set bits to counts for that bit.
      */
     public CountingBloomFilter(Map<Integer, Integer> counts, Shape shape) {
+        super(shape);
         this.counts = new TreeMap<Integer, Integer>(counts);
-        this.shape = shape;
     }
 
     /**
@@ -110,7 +109,7 @@ public class CountingBloomFilter implements BloomFilter {
      * @return an immutable map of enabled bits (key) to counts for that bit (value).
      */
     public Stream<Map.Entry<Integer, Integer>> getCounts() {
-        return counts.entrySet().stream();
+        return counts.entrySet().stream().map( e -> new AbstractMap.SimpleEntry<Integer,Integer>(e.getKey(), e.getValue()));
     }
 
     @Override
@@ -133,22 +132,20 @@ public class CountingBloomFilter implements BloomFilter {
      */
     @Override
     public void merge(BloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
-        merge( BitSet.valueOf( other.getBits() ).stream().parallel().boxed());
+        verifyShape( other );
+        merge( BitSet.valueOf( other.getBits() ).stream().boxed());
     }
 
     public void merge(CountingBloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
-        merge( other.counts.keySet().parallelStream());
+        verifyShape( other );
+        merge( other.counts.keySet().stream());
     }
+
 
     private void merge( Stream<Integer> idxStream )
     {
-        idxStream.forEach( idx -> counts.put(idx, counts.get(idx)+1 ) );
+        idxStream.forEach( idx -> { Integer val = counts.get(idx);
+        counts.put( idx, val==null?1:val+1);});
     }
 
     /**
@@ -163,36 +160,30 @@ public class CountingBloomFilter implements BloomFilter {
      * @return a new filter.
      */
     public void remove(BloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+        verifyShape( other );
         remove( BitSet.valueOf( other.getBits() ).stream().parallel().boxed());
     }
 
     public void remove(CountingBloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+        verifyShape( other );
         remove( other.counts.keySet().parallelStream());
     }
 
     private void remove( Stream<Integer> idxStream )
     {
-        idxStream.forEach( idx -> counts.put(idx, counts.get(idx)-1 ) );
+        idxStream.forEach( idx -> { Integer val = counts.get(idx);
+        if (val != null)
+        {
+            counts.put( idx, val-1);
+        } });
     }
 
 
     @Override
     public LongBuffer getBits() {
         BitSet bs = new BitSet();
-        counts.keySet().parallelStream().forEach( bs::set );
+        counts.keySet().stream().forEach( bs::set );
         return LongBuffer.wrap(bs.toLongArray());
-    }
-
-
-    @Override
-    public Shape getShape() {
-       return shape;
     }
 
 }

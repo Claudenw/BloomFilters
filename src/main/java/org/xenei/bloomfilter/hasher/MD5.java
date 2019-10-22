@@ -5,18 +5,16 @@ import java.nio.LongBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.xenei.bloomfilter.Hasher;
+
 public class MD5 implements Hasher.Func  {
 
-    MessageDigest md;
-    long[] result = null;
+    private MessageDigest md;
+    private long[] result = null;
+    public static final String name = "MD5-SC";
 
     public MD5() throws NoSuchAlgorithmException {
         md = MessageDigest.getInstance("MD5");
-    }
-
-    @Override
-    public String getName() {
-        return "MD5-SC";
     }
 
     @Override
@@ -24,16 +22,17 @@ public class MD5 implements Hasher.Func  {
 
         if (result == null || seed == 0 )
         {
+            result = new long[2];
             byte[] hash;
             synchronized (md) {
-                int p = buffer.position();
-                md.update( buffer );
+                md.update( buffer.duplicate().position(0) );
                 hash = md.digest();
                 md.reset();
-                buffer.position( p );
             }
 
             LongBuffer lb = ByteBuffer.wrap( hash ).asLongBuffer();
+            lb.position(0);
+            System.out.println( lb.limit() );
             result[0] = lb.get(0);
             result[1] = lb.get(1);
         } else {

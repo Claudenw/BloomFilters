@@ -22,23 +22,13 @@ import org.xenei.bloomfilter.hasher.MurmurHash3.LongPair;
  *  <p>
  *  See http://github.com/yonik/java_util for future updates to this file.
  */
-public class Murmur128 implements Hasher.Func  {
+public class Murmur32 implements Hasher.Func  {
 
-    private LongPair parts = null;
-    public static final String name = "Murmur3_x64_128-SC";
+    public static final String name = "Murmur3_x86_32-SI";
 
     @Override
     public long applyAsLong(ByteBuffer buffer, Integer seed) {
-        if (parts == null || seed == 0)
-        {
-            parts = new LongPair();
-            MurmurHash3.murmurhash3_x64_128( buffer, 0, buffer.limit(), 0, parts  );
-        }
-        else {
-            parts.val1 += parts.val2;
-        }
-        return parts.val1;
+        return MurmurHash3.murmurhash3_x86_32( buffer, 0, buffer.limit(), seed );
+
     }
-
-
 }

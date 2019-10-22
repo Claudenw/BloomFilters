@@ -20,8 +20,6 @@ package org.xenei.bloomfilter;
 import java.nio.LongBuffer;
 import java.util.BitSet;
 import java.util.Objects;
-
-import org.xenei.bloomfilter.hasher.Hasher;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -43,31 +41,57 @@ import org.xenei.bloomfilter.hasher.Hasher;
  * The interface that defines a bloom filter.
  *
  */
-public interface BloomFilter {
+public abstract class BloomFilter {
+
+    /**
+     * The shape used by this BloomFilter
+     */
+    private Shape shape;
 
     /**
      * Gets the LongBuffer representation of this filter.
      * @return the LongBuffer representation of this filter.
      */
-    LongBuffer getBits();
+    public abstract LongBuffer getBits();
+
+    /**
+     * Construct a Bloom filter with the specified shape.
+     * @param shape The shape.
+     */
+    protected BloomFilter(Shape shape) {
+        this.shape = shape;
+    }
+
+    /**
+     * Verify the other Bloom filter has the same shape as this Bloom filter.
+     * @param other the other filter to check.
+     * @throws IllegalArgumentException if the shapes are not the same.
+     */
+    protected final void verifyShape( BloomFilter other ) {
+        if (!shape.equals( other.getShape() )) {
+            throw new IllegalArgumentException( "Other does not have same shape");
+        }
+    }
 
     /**
      * Gets the shape of this filter.
      * @return The shape of this filter.
      */
-    Shape getShape();
+    public final Shape getShape() {
+        return shape;
+    }
 
     /**
      * Merge the other Bloom filter into this one.
      * @param other the other Bloom filter.
      */
-    void merge( BloomFilter other );
+    abstract public void merge( BloomFilter other );
 
     /**
      * Gets the cardinality of this Bloom filter.
      * @return the cardinality (number of enabled bits) in this filter.
      */
-    default int cardinality() {
+    public int cardinality() {
         return BitSet.valueOf( getBits() ).cardinality();
     }
 
@@ -77,10 +101,8 @@ public interface BloomFilter {
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this AND other ).
      */
-    default int andCardinality( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public int andCardinality( BloomFilter other ) {
+        verifyShape( other );
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
@@ -111,10 +133,8 @@ public interface BloomFilter {
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this OR other ).
      */
-    default int orCardinality( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public int orCardinality( BloomFilter other ) {
+        verifyShape( other );
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
@@ -145,10 +165,8 @@ public interface BloomFilter {
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this XOR other ).
      */
-    default int xorCardinality( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public int xorCardinality( BloomFilter other ) {
+        verifyShape( other );
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
@@ -178,10 +196,8 @@ public interface BloomFilter {
      * @param other the Other Bloom filter.
      * @return true if this filter matches the other.
      */
-    default boolean match( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public boolean match( BloomFilter other ) {
+        verifyShape( other );
         return cardinality() == andCardinality( other );
     }
 
@@ -189,7 +205,7 @@ public interface BloomFilter {
      * Gets the Hamming value of this Bloom filter.
      * @return the hamming value.
      */
-    default int hammingValue() {
+    public int hammingValue() {
         return cardinality();
     }
 
@@ -198,10 +214,8 @@ public interface BloomFilter {
      * @param other the Other bloom filter.
      * @return the Hamming distance.
      */
-    default int hammingDistance( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public int hammingDistance( BloomFilter other ) {
+        verifyShape( other );
         return xorCardinality( other );
     }
 
@@ -210,10 +224,8 @@ public interface BloomFilter {
      * @param other the Other bloom filter.
      * @return the Jaccard similarity.
      */
-    default double jaccardSimilarity( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public double jaccardSimilarity( BloomFilter other ) {
+        verifyShape( other );
         int orCard = orCardinality( other );
         if (orCard == 0)
         {
@@ -227,7 +239,7 @@ public interface BloomFilter {
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
-    default double jaccardDistance( BloomFilter other ) {
+    public final double jaccardDistance( BloomFilter other ) {
         return 1.0 - jaccardSimilarity( other );
     }
 
@@ -236,10 +248,8 @@ public interface BloomFilter {
      * @param other the Other bloom filter.
      * @return the Cosine similarity.
      */
-    default double cosineSimilarity( BloomFilter other ) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public double cosineSimilarity( BloomFilter other ) {
+        verifyShape( other );
         return andCardinality( other ) / (Math.sqrt( cardinality() ) * Math.sqrt( other.cardinality()));
     }
 
@@ -248,7 +258,7 @@ public interface BloomFilter {
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
-    default double cosineDistance( BloomFilter other ) {
+    public final double cosineDistance( BloomFilter other ) {
         return 1.0 - cosineSimilarity( other );
     }
 
@@ -257,7 +267,7 @@ public interface BloomFilter {
      * number of bits that are enabled.
      * @return and estimate of the number of items that were placed in the Bloom filter.
      */
-    default long estimateSize() {
+    public final long estimateSize() {
         double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions()) *
             Math.log(1.0 - (hammingValue() * 1.0 / getShape().getNumberOfBits()));
         return Math.round( estimate );
@@ -269,10 +279,8 @@ public interface BloomFilter {
      * @param other the other Bloom filter.
      * @return an estimate of the size of the union between the two filters.
      */
-    default long estimateUnionSize(BloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public final long estimateUnionSize(BloomFilter other) {
+        verifyShape( other );
         double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions()) *
             Math.log(1 - orCardinality(other) * 1.0 / getShape().getNumberOfBits());
         return Math.round( estimate );
@@ -284,10 +292,8 @@ public interface BloomFilter {
      * @param other the other Bloom filter.
      * @return an estimate of the size of the intersection between the two filters.
      */
-    default long estimateIntersectionSize(BloomFilter other) {
-        if (!getShape().equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
-        }
+    public final long estimateIntersectionSize(BloomFilter other) {
+        verifyShape( other );
         // do subtraction early to avoid Long overflow.
         return estimateSize() - estimateUnionSize(other) + other.estimateSize();
     }
@@ -298,7 +304,7 @@ public interface BloomFilter {
      * @param filter the filter to check.
      * @return true if the filter is full.
      */
-    default boolean isFull() {
+    public final boolean isFull() {
         return hammingValue() == getShape().getNumberOfBits();
     }
 
@@ -328,7 +334,7 @@ public interface BloomFilter {
      * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter calculator</a>
      * @see <a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filter [Wikipedia]</a>
      */
-    public class Shape {
+    public static class Shape {
 
         /**
          * The natural logarithm of 2. Used in several calculations. approx 0.693147180
