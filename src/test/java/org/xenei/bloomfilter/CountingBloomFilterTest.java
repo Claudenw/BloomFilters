@@ -113,6 +113,32 @@ public class CountingBloomFilterTest {
 
     }
 
+    @Test
+    public void mergeTest_Shape_Hasher() {
+        CountingBloomFilter bf = new CountingBloomFilter(hasher, shape);
+
+        DynamicHasher hasher2 = HasherFactory.getHasher("TestFunc");
+        hasher2.with("World");
+
+        bf.merge(shape, hasher2);
+        assertEquals(27, bf.hammingValue());
+
+        assertEquals(27, bf.getCounts().count());
+        assertEquals(Integer.valueOf(2), bf.getCounts().map(Map.Entry::getValue).max(Integer::compare).get());
+        assertEquals(Integer.valueOf(1), bf.getCounts().map(Map.Entry::getValue).min(Integer::compare).get());
+
+        Map<Integer, Integer> m = new HashMap<Integer, Integer>();
+        bf.getCounts().forEach(e -> m.put(e.getKey(), e.getValue()));
+        assertEquals(2, m.get(10).intValue());
+        assertEquals(2, m.get(11).intValue());
+        assertEquals(2, m.get(12).intValue());
+        assertEquals(2, m.get(13).intValue());
+        assertEquals(2, m.get(14).intValue());
+        assertEquals(2, m.get(15).intValue());
+        assertEquals(2, m.get(16).intValue());
+
+    }
+
     public static class TestFunc implements ToLongBiFunction<ByteBuffer, Integer> {
 
         @Override

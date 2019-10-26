@@ -55,6 +55,7 @@ public class EWAHBloomFilterTest {
         EWAHBloomFilter bf2 = new EWAHBloomFilter(hasher2, shape);
 
         assertEquals(27, bf.orCardinality(bf2));
+
     }
 
     @Test
@@ -93,6 +94,17 @@ public class EWAHBloomFilterTest {
         assertEquals(27, bf.hammingValue());
     }
 
+
+    @Test
+    public void mergeTest_Shape_Hasher() {
+        EWAHBloomFilter bf = new EWAHBloomFilter(hasher, shape);
+
+        DynamicHasher hasher2 = HasherFactory.getHasher("TestFunc");
+        hasher2.with("World");
+
+       bf.merge( shape, hasher2);
+        assertEquals(27, bf.hammingValue());
+    }
     public static class TestFunc implements ToLongBiFunction<ByteBuffer, Integer> {
 
         @Override

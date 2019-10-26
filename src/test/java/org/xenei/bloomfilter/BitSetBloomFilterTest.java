@@ -93,6 +93,17 @@ public class BitSetBloomFilterTest {
         assertEquals(27, bf.hammingValue());
     }
 
+    @Test
+    public void mergeTest_Shape_Hasher() {
+        BitSetBloomFilter bf = new BitSetBloomFilter(hasher, shape);
+
+        DynamicHasher hasher2 = HasherFactory.getHasher("TestFunc");
+        hasher2.with("World");
+
+        bf.merge(shape, hasher2 );
+        assertEquals(27, bf.hammingValue());
+    }
+
     public static class TestFunc implements ToLongBiFunction<ByteBuffer, Integer> {
 
         @Override

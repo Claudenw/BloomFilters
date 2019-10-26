@@ -35,19 +35,17 @@ import org.xenei.bloomfilter.hasher.Murmur32;
 import org.xenei.bloomfilter.hasher.ObjectsHash;
 
 /**
- * The class that performs hashing.
+ * A factory that produces Hashers.
+ *
+ * <li>A Hasher may be registered with the HasherFactory
+ * class via the static method {@code HasherFactory.register( String, Class<? extends ToLongBiFunction<ByteBuffer, Integer>> )}.</li>
+ * <li>Hashers may be retrieved via the static method
+ * {@code HasherFactory.getHasher( String name )}, where name is the name that was provided
+ * during the {@code HasherFactory.register()} call.</li>
+ * <li>The names of all registered Hashers can be listed by calling the static method
+ * {@code HasherFactory.listHashers()}.</li>
  * <p>
- * Hashers are known by their implementation of the Hasher.Func interface.
- * <ul>
- * <li>Each Hasher.Func has a unique name, and is registered with the Hasher
- * class via the static method {@code Hasher.register( Func func )}.</li>
- * <li>Hashers are retrieved via the static method
- * {@code Hasher.getHasher( String name )}, where name is the well known name of
- * the Hasher.Func.</li>
- * <li>The name of all known Funcs can be listed by calling the static method
- * {@code Hasher.listFuncs()}.</li>
- * <p>
- * The Hasher is guaranteed to have the Funcs defiend in the the
+ * The Hasher is guaranteed to have the Hashers defiend in the the
  * {@code org.xenei.bloomfilter.hasher} package registered.
  *
  */
@@ -61,40 +59,40 @@ public class HasherFactory {
     }
 
     /**
-     * Registers a Func implementation. After registration the Func name can be used
-     * to retrieve a Hasher.
+     * Registers a Hasher implementation. After registration the name can be used
+     * to retrieve the Hasher.
      * <p>
-     *
-     * The func calculates the long value that is used to turn on a bit in the Bloom
+     * The function calculates the long value that is used to turn on a bit in the Bloom
      * filter. The first argument is a {@code ByteBuffer} containing the bytes to be
      * indexed, the second argument is a seed index.
      * </p>
      * <p>
      * On the first call to {@code applyAsLong} the seed index will be 0 and the
-     * func should start the hash sequence.
+     * function should start the hash sequence.
      * </p>
      * <p>
      * On subsequent calls the hash function using the same buffer the seed index
-     * will be incremented. The func should return a different calculated value on
-     * each call. The func may use the seed as part of the calculation or simply use
+     * will be incremented. The function should return a different calculated value on
+     * each call. The function may use the seed as part of the calculation or simply use
      * it to detect when the buffer has changed.
      * </p>
      *
      * @see #getHasher(String)
-     * @param func the Func to register.
+     * @param name The name of the hasher
+     * @param functionClass The function for the hasher to use.  Must have a zero argument constructor.
      * @throws SecurityException     if the no argument constructor can not be
      *                               accessed.
-     * @throws NoSuchMethodException if func does not have a no argument
+     * @throws NoSuchMethodException if functionClass does not have a no argument
      *                               constructor.
      */
-    public static void register(String name, Class<? extends ToLongBiFunction<ByteBuffer, Integer>> func)
+    public static void register(String name, Class<? extends ToLongBiFunction<ByteBuffer, Integer>> functionClass)
             throws NoSuchMethodException, SecurityException {
-        Constructor<? extends ToLongBiFunction<ByteBuffer, Integer>> c = func.getConstructor();
+        Constructor<? extends ToLongBiFunction<ByteBuffer, Integer>> c = functionClass.getConstructor();
         funcMap.put(name, c);
     }
 
     /**
-     * Lists all registered Funcs.
+     * Lists all registered Hashers.
      *
      * @return the list of all registered Func names.
      */
@@ -135,23 +133,39 @@ public class HasherFactory {
     /**
      * Gets the specified hasher.
      *
-     * @param funcName the name of the hasher to create.
-     * @return the Hasher
+     * @param name the name of the hasher to create.
+     * @return A DynamicHasher of the specified type.
      * @throws IllegalArgumentException if the funcName is not registered.
      * @throws IllegalStateException    if the function can not be instantiated.
      */
-    public static DynamicHasher getHasher(String funcName) throws IllegalArgumentException {
-        Constructor<? extends ToLongBiFunction<ByteBuffer, Integer>> c = funcMap.get(funcName);
+    public static DynamicHasher getHasher(String name) throws IllegalArgumentException {
+        Constructor<? extends ToLongBiFunction<ByteBuffer, Integer>> c = funcMap.get(name);
         if (c == null) {
-            throw new IllegalArgumentException("No function implementation named " + funcName);
+            throw new IllegalArgumentException("No function implementation named " + name);
         }
         try {
-            return new DynamicHasher(funcName, c.newInstance());
+            return new DynamicHasher(name, c.newInstance());
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Unable to call constructor for " + funcName, e);
+            throw new IllegalStateException("Unable to call constructor for " + name, e);
         }
     }
 
+    /**
+     * The class that performs hashing.
+     * <p>
+     * Hashers have a Unique name.
+     * <ul>
+     * <li>A Hasher may be registered with the HasherFactory
+     * class via the static method {@code HasherFactory.register( String, Class<? extends ToLongBiFunction<ByteBuffer, Integer>> )}.</li>
+     * <li>Hashers may be retrieved via the static method
+     * {@code HasherFactory.getHasher( String name )}, where name is the name that was provided
+     * during the {@code HasherFactory.register()} call.</li>
+     * </ul>
+     * <p>
+     * Implementations of {@code getBits()} may return duplicate values and may return
+     * values in a random order.  See implementation javadoc notes as to the guarantees
+     * provided by the specific implementation.
+     */
     public interface Hasher {
 
         /**
@@ -164,15 +178,11 @@ public class HasherFactory {
         /**
          * Return an iterator of integers that are the bits to enable in the Bloom
          * filter based on the shape.
-         * <p>
-         * Once this method is called the Hasher is locked and no further properties may
-         * be added.
-         * </p>
          *
          * @param shape the shape of the desired Bloom filter.
-         * @return the interator of integers;
-         * @throws IllegalArgumentException if {@code shape,getHasherName()} does not
-         *                                  equal {@code func.getName()}
+         * @return the Iterator of integers;
+         * @throws IllegalArgumentException if {@code shape.getHasherName()} does not
+         *                                  equal {@code getName()}
          */
         public PrimitiveIterator.OfInt getBits(Shape shape);
     }

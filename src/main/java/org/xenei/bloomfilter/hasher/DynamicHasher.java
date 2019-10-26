@@ -48,34 +48,6 @@ import org.xenei.bloomfilter.HasherFactory.Hasher;
 public class DynamicHasher implements Hasher {
 
     /**
-     * Registers a Func implementation. After registration the Func name can be used
-     * to retrieve a Hasher.
-     * <p>
-     *
-     * The func calculates the long value that is used to turn on a bit in the Bloom
-     * filter. The first argument is a {@code ByteBuffer} containing the bytes to be
-     * indexed, the second argument is a seed index.
-     * </p>
-     * <p>
-     * On the first call to {@code applyAsLong} the seed index will be 0 and the
-     * func should start the hash sequence.
-     * </p>
-     * <p>
-     * On subsequent calls the hash function using the same buffer the seed index
-     * will be incremented. The func should return a different calculated value on
-     * each call. The func may use the seed as part of the calculation or simply use
-     * it to detect when the buffer has changed.
-     * </p>
-     * 
-     * @see #getHasher(String)
-     * @param func the Func to register.
-     * @throws SecurityException     if the no argument constructor can not be
-     *                               accessed.
-     * @throws NoSuchMethodException if func does not have a no argument
-     *                               constructor.
-     */
-
-    /**
      * The list of ByteBuffers that are to be hashed.
      */
     private final List<ByteBuffer> buffers;
@@ -86,7 +58,7 @@ public class DynamicHasher implements Hasher {
     private final ToLongBiFunction<ByteBuffer, Integer> function;
 
     /**
-     * The name of the func.
+     * The name of the function.
      */
     private final String name;
 
@@ -97,7 +69,7 @@ public class DynamicHasher implements Hasher {
 
     /**
      * The constructor
-     * 
+     *
      * @param function the function to use.
      */
     public DynamicHasher(String name, ToLongBiFunction<ByteBuffer, Integer> function) {
@@ -112,19 +84,33 @@ public class DynamicHasher implements Hasher {
         return name;
     }
 
+    /**
+     * Return an iterator of integers that are the bits to enable in the Bloom
+     * filter based on the shape.  The iterator may return the same value multiple
+     * times.  There is no guarantee made as to the order of the integers.
+     * <p>
+     * Once this method is called the Hasher is locked and no further properties may
+     * be added.
+     * </p>
+     *
+     * @param shape the shape of the desired Bloom filter.
+     * @return the Iterator of integers;
+     * @throws IllegalArgumentException if {@code shape.getHasherName()} does not
+     *                                  equal {@code getName()}
+     */
     @Override
     public PrimitiveIterator.OfInt getBits(Shape shape) {
-        locked = true;
         if (!getName().equals(shape.getHasherName())) {
             throw new IllegalArgumentException(
                     String.format("Shape hasher %s is not %s", shape.getHasherName(), getName()));
         }
+        locked = true;
         return new Iter(shape);
     }
 
     /**
      * Adds a ByteBuffer to the hasher.
-     * 
+     *
      * @param property the ByteBuffer to add.
      * @returns {@code this} for chaining.
      * @throws IllegalStateException if the Hasher is locked.
@@ -140,7 +126,7 @@ public class DynamicHasher implements Hasher {
 
     /**
      * Adds a byte to the hasher.
-     * 
+     *
      * @param property the byte to add
      * @returns {@code this} for chaining.
      * @throws IllegalStateException if the Hasher is locked.
@@ -152,7 +138,7 @@ public class DynamicHasher implements Hasher {
 
     /**
      * Adds an array of bytes to the hasher.
-     * 
+     *
      * @param property the array of bytes to add.
      * @returns {@code this} for chaining.
      * @throws IllegalStateException if the Hasher is locked.
@@ -165,7 +151,7 @@ public class DynamicHasher implements Hasher {
     /**
      * Adds a string to the hasher. The string is converted to a byte array using
      * the UTF-8 Character set.
-     * 
+     *
      * @param property the string to add.
      * @throws IllegalStateException if the Hasher is locked.
      * @see #getBits(Shape)
@@ -184,7 +170,7 @@ public class DynamicHasher implements Hasher {
 
         /**
          * Creates iterator with the specified shape.
-         * 
+         *
          * @param shape
          */
         private Iter(Shape shape) {
