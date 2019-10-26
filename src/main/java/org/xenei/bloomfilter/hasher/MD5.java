@@ -4,10 +4,9 @@ import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.function.ToLongBiFunction;
 
-import org.xenei.bloomfilter.Hasher;
-
-public class MD5 implements Hasher.Func  {
+public class MD5 implements ToLongBiFunction<ByteBuffer, Integer> {
 
     private MessageDigest md;
     private long[] result = null;
@@ -20,19 +19,18 @@ public class MD5 implements Hasher.Func  {
     @Override
     public long applyAsLong(ByteBuffer buffer, Integer seed) {
 
-        if (result == null || seed == 0 )
-        {
+        if (result == null || seed == 0) {
             result = new long[2];
             byte[] hash;
             synchronized (md) {
-                md.update( buffer.duplicate().position(0) );
+                md.update(buffer.duplicate().position(0));
                 hash = md.digest();
                 md.reset();
             }
 
-            LongBuffer lb = ByteBuffer.wrap( hash ).asLongBuffer();
+            LongBuffer lb = ByteBuffer.wrap(hash).asLongBuffer();
             lb.position(0);
-            System.out.println( lb.limit() );
+            System.out.println(lb.limit());
             result[0] = lb.get(0);
             result[1] = lb.get(1);
         } else {

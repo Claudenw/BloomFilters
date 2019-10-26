@@ -2,16 +2,21 @@ package org.xenei.bloomfilter.hasher;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
+import java.util.function.ToLongBiFunction;
 
-import org.xenei.bloomfilter.Hasher;
+public class ObjectsHash implements ToLongBiFunction<ByteBuffer, Integer> {
 
-public class ObjectsHash implements Hasher.Func  {
-
-   public static final String name = "Objects32-SI";
+    public static final String name = "Objects32-SI";
+    private long last = 0;
 
     @Override
     public long applyAsLong(ByteBuffer buffer, Integer seed) {
-        return Objects.hash( seed, buffer.duplicate().position(0) );
+        if (seed == 0) {
+            last = 0;
+        }
+        long result = Objects.hash(last, buffer.duplicate().position(0));
+        last += result;
+        return result;
     }
 
 }

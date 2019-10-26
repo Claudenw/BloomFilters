@@ -21,8 +21,8 @@ import java.nio.LongBuffer;
 import java.util.BitSet;
 import java.util.PrimitiveIterator.OfInt;
 
-import com.googlecode.javaewah.EWAHCompressedBitmap;
-
+import org.xenei.bloomfilter.HasherFactory.Hasher;
+import org.xenei.bloomfilter.hasher.StaticHasher;
 
 /**
  * A bloom filter.
@@ -35,42 +35,59 @@ public class BitSetBloomFilter extends BloomFilter {
      */
     private BitSet bitSet;
 
-
-	@Override
+    @Override
     public LongBuffer getBits() {
-	    return LongBuffer.wrap( bitSet.toLongArray() );
-	}
+        return LongBuffer.wrap(bitSet.toLongArray());
+    }
 
-	public BitSetBloomFilter(Hasher hasher, Shape shape) {
-	    super( shape );
-	    if (!hasher.getName().equals( shape.getHasherName() ))
-        {
+    @Override
+    public StaticHasher getHasher() {
+        return new StaticHasher(bitSet.stream().iterator(), getShape());
+    }
+
+    public BitSetBloomFilter(Hasher hasher, Shape shape) {
+        super(shape);
+        if (!hasher.getName().equals(shape.getHasherName())) {
             throw new IllegalArgumentException(
                     String.format("Hasher names do not match %s != %s", hasher.getName(), shape.getHasherName()));
         }
-	    this.bitSet = new BitSet();
-	    OfInt iter = hasher.getBits(shape);
-	    while (iter.hasNext())
-	    {
-	        bitSet.set( iter.nextInt() );
-	    }
-	}
-
-	/**
-	 * Constructor.
-	 *
-	 * @param shape The BloomFilter.Shape to define this BloomFilter.
-	 */
-	public BitSetBloomFilter(Shape shape) {
-	    super( shape );
         this.bitSet = new BitSet();
-	}
+        OfInt iter = hasher.getBits(shape);
+        while (iter.hasNext()) {
+            bitSet.set(iter.nextInt());
+        }
+    }
 
+    /**
+     * Constructor.
+     *
+     * @param shape The BloomFilter.Shape to define this BloomFilter.
+     */
+    public BitSetBloomFilter(Shape shape) {
+        super(shape);
+        this.bitSet = new BitSet();
+    }
 
-	@Override
+    @Override
     public void merge(BloomFilter other) {
-	    verifyShape( other );
-	    bitSet.or( BitSet.valueOf( other.getBits() ));
+        verifyShape(other);
+        bitSet.or(BitSet.valueOf(other.getBits()));
+    }
+
+    @Override
+    public boolean contains(Shape shape, Hasher hasher) {
+        verifyShape(shape);
+        if (!shape.getHasherName().equals(hasher.getName())) {
+            throw new IllegalArgumentException(String.format("Hasher (%s) is not the sames as for shape (%s)",
+                    hasher.getName(), shape.getHasherName()));
+        }
+        OfInt iter = hasher.getBits(shape);
+        while (iter.hasNext()) {
+            if (!bitSet.get(iter.nextInt())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -78,41 +95,39 @@ public class BitSetBloomFilter extends BloomFilter {
         return bitSet.cardinality();
     }
 
-	@Override
-	public String toString() {
-		return bitSet.toString();
-	}
+    @Override
+    public String toString() {
+        return bitSet.toString();
+    }
 
-	/**
-	 * Merge this bloom filter with the other creating a new filter.
-	 *
-	 * @param other the other filter.
-	 */
-	public void merge(BitSetBloomFilter other) {
-        verifyShape( other );
-	    bitSet.or( other.bitSet );
-	}
-
+    /**
+     * Merge this bloom filter with the other creating a new filter.
+     *
+     * @param other the other filter.
+     */
+    public void merge(BitSetBloomFilter other) {
+        verifyShape(other);
+        bitSet.or(other.bitSet);
+    }
 
     public int andCardinality(BitSetBloomFilter other) {
-        verifyShape( other );
+        verifyShape(other);
         BitSet result = (BitSet) bitSet.clone();
-        result.and( other.bitSet );
+        result.and(other.bitSet);
         return result.cardinality();
     }
 
-
     public int orCardinality(BitSetBloomFilter other) {
-        verifyShape( other );
+        verifyShape(other);
         BitSet result = (BitSet) bitSet.clone();
-        result.or( other.bitSet );
+        result.or(other.bitSet);
         return result.cardinality();
     }
 
     public int xorCardinality(BitSetBloomFilter other) {
-        verifyShape( other );
+        verifyShape(other);
         BitSet result = (BitSet) bitSet.clone();
-        result.xor( other.bitSet );
+        result.xor(other.bitSet);
         return result.cardinality();
     }
 

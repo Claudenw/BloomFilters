@@ -20,6 +20,11 @@ package org.xenei.bloomfilter;
 import java.nio.LongBuffer;
 import java.util.BitSet;
 import java.util.Objects;
+import java.util.PrimitiveIterator.OfInt;
+
+import org.xenei.bloomfilter.HasherFactory.Hasher;
+import org.xenei.bloomfilter.hasher.StaticHasher;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -50,12 +55,22 @@ public abstract class BloomFilter {
 
     /**
      * Gets the LongBuffer representation of this filter.
+     * 
      * @return the LongBuffer representation of this filter.
      */
     public abstract LongBuffer getBits();
 
     /**
+     * Creates a StaticHasher that contains the indexes of the bits that are on in
+     * this filter.
+     *
+     * @return a StaticHasher for that produces this Bloom filter.
+     */
+    public abstract StaticHasher getHasher();
+
+    /**
      * Construct a Bloom filter with the specified shape.
+     * 
      * @param shape The shape.
      */
     protected BloomFilter(Shape shape) {
@@ -64,17 +79,29 @@ public abstract class BloomFilter {
 
     /**
      * Verify the other Bloom filter has the same shape as this Bloom filter.
+     * 
      * @param other the other filter to check.
      * @throws IllegalArgumentException if the shapes are not the same.
      */
-    protected final void verifyShape( BloomFilter other ) {
-        if (!shape.equals( other.getShape() )) {
-            throw new IllegalArgumentException( "Other does not have same shape");
+    protected final void verifyShape(BloomFilter other) {
+        verifyShape(other.getShape());
+    }
+
+    /**
+     * Verify the other Bloom filter has the same shape as this Bloom filter.
+     * 
+     * @param other the other shape to check.
+     * @throws IllegalArgumentException if the shapes are not the same.
+     */
+    protected final void verifyShape(Shape shape) {
+        if (!this.shape.equals(shape)) {
+            throw new IllegalArgumentException("Other does not have same shape");
         }
     }
 
     /**
      * Gets the shape of this filter.
+     * 
      * @return The shape of this filter.
      */
     public final Shape getShape() {
@@ -83,126 +110,159 @@ public abstract class BloomFilter {
 
     /**
      * Merge the other Bloom filter into this one.
+     * 
      * @param other the other Bloom filter.
      */
-    abstract public void merge( BloomFilter other );
+    abstract public void merge(BloomFilter other);
 
     /**
      * Gets the cardinality of this Bloom filter.
+     * 
      * @return the cardinality (number of enabled bits) in this filter.
      */
     public int cardinality() {
-        return BitSet.valueOf( getBits() ).cardinality();
+        return BitSet.valueOf(getBits()).cardinality();
     }
 
     /**
      * Performs a logical "AND" with the other Bloom filter and returns the
      * cardinality of the result.
+     * 
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this AND other ).
      */
-    public int andCardinality( BloomFilter other ) {
-        verifyShape( other );
+    public int andCardinality(BloomFilter other) {
+        verifyShape(other);
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
         long[] result = null;
-        if ( mine.limit() > theirs.limit()) {
-            result = new long[ mine.limit() ];
+        if (mine.limit() > theirs.limit()) {
+            result = new long[mine.limit()];
             remainder = mine;
         } else {
-            result = new long[ theirs.limit() ];
+            result = new long[theirs.limit()];
             remainder = theirs;
 
         }
         int limit = Integer.min(mine.limit(), theirs.limit());
-        for (int i = 0;i<limit;i++)
-        {
+        for (int i = 0; i < limit; i++) {
             result[i] = mine.get(i) & theirs.get(i);
         }
-        for (int i=limit;i<result.length-1;i++)
-        {
+        for (int i = limit; i < result.length - 1; i++) {
             result[i] = remainder.get(i);
         }
-        return BitSet.valueOf( result ).cardinality();
+        return BitSet.valueOf(result).cardinality();
     }
 
     /**
      * Performs a logical "OR" with the other Bloom filter and returns the
      * cardinality of the result.
+     * 
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this OR other ).
      */
-    public int orCardinality( BloomFilter other ) {
-        verifyShape( other );
+    public int orCardinality(BloomFilter other) {
+        verifyShape(other);
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
         long[] result = null;
-        if ( mine.limit() > theirs.limit()) {
-            result = new long[ mine.limit() ];
+        if (mine.limit() > theirs.limit()) {
+            result = new long[mine.limit()];
             remainder = mine;
         } else {
-            result = new long[ theirs.limit() ];
+            result = new long[theirs.limit()];
             remainder = theirs;
 
         }
         int limit = Integer.min(mine.limit(), theirs.limit());
-        for (int i = 0;i<limit;i++)
-        {
+        for (int i = 0; i < limit; i++) {
             result[i] = mine.get(i) | theirs.get(i);
         }
-        for (int i=limit;i<result.length-1;i++)
-        {
+        for (int i = limit; i < result.length - 1; i++) {
             result[i] = remainder.get(i);
         }
-        return BitSet.valueOf( result ).cardinality();
+        return BitSet.valueOf(result).cardinality();
     }
 
     /**
      * Performs a logical "XOR" with the other Bloom filter and returns the
      * cardinality of the result.
+     * 
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this XOR other ).
      */
-    public int xorCardinality( BloomFilter other ) {
-        verifyShape( other );
+    public int xorCardinality(BloomFilter other) {
+        verifyShape(other);
         LongBuffer mine = getBits();
         LongBuffer theirs = other.getBits();
         LongBuffer remainder = null;
         long[] result = null;
-        if ( mine.limit() > theirs.limit()) {
-            result = new long[ mine.limit() ];
+        if (mine.limit() > theirs.limit()) {
+            result = new long[mine.limit()];
             remainder = mine;
         } else {
-            result = new long[ theirs.limit() ];
+            result = new long[theirs.limit()];
             remainder = theirs;
 
         }
         int limit = Integer.min(mine.limit(), theirs.limit());
-        for (int i = 0;i<limit;i++)
-        {
+        for (int i = 0; i < limit; i++) {
             result[i] = mine.get(i) ^ theirs.get(i);
         }
-        for (int i=limit;i<result.length-1;i++)
-        {
+        for (int i = limit; i < result.length - 1; i++) {
             result[i] = remainder.get(i);
         }
-        return BitSet.valueOf( result ).cardinality();
+        return BitSet.valueOf(result).cardinality();
     }
 
     /**
-     * Performs a match check.  Effectively this AND other == this.
+     * Performs a match check. Effectively this AND other == this.
+     * 
      * @param other the Other Bloom filter.
      * @return true if this filter matches the other.
      */
-    public boolean match( BloomFilter other ) {
-        verifyShape( other );
-        return cardinality() == andCardinality( other );
+    public boolean matches(BloomFilter other) {
+        verifyShape(other);
+        return cardinality() == andCardinality(other);
+    }
+
+    /**
+     * Performs an inverse match check against a decomposed Bloom filter. The shape
+     * must match the shape of this filter. The hasher provides bit indexes to check
+     * for. Effectively decomposed AND this == decomposed.
+     * 
+     * @param Shape the Other Bloom filter.
+     * @return true if this filter matches the other.
+     * @throws IllegalArgumentException if the shape argument does not match the
+     *                                  shape of this filter, or if the hasher is
+     *                                  not the specified one
+     */
+    public boolean contains(Shape shape, Hasher hasher) {
+        verifyShape(shape);
+        if (!shape.getHasherName().equals(hasher.getName())) {
+            throw new IllegalArgumentException(String.format("Hasher (%s) is not the sames as for shape (%s)",
+                    hasher.getName(), shape.getHasherName()));
+        }
+        LongBuffer buff = getBits();
+
+        OfInt iter = hasher.getBits(shape);
+        while (iter.hasNext()) {
+            int idx = iter.nextInt();
+            int buffIdx = idx / Long.SIZE;
+            int pwr = Math.floorMod(idx, Long.SIZE);
+            long buffOffset = (long) Math.pow(2, pwr);
+            if ((buff.get(buffIdx) & buffOffset) == 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
      * Gets the Hamming value of this Bloom filter.
+     * 
      * @return the hamming value.
      */
     public int hammingValue() {
@@ -211,96 +271,105 @@ public abstract class BloomFilter {
 
     /**
      * Gets the Hamming distance to the other Bloom filter.
+     * 
      * @param other the Other bloom filter.
      * @return the Hamming distance.
      */
-    public int hammingDistance( BloomFilter other ) {
-        verifyShape( other );
-        return xorCardinality( other );
+    public int hammingDistance(BloomFilter other) {
+        verifyShape(other);
+        return xorCardinality(other);
     }
 
     /**
      * Gets the Jaccard similarity wih the other Bloom filter.
+     * 
      * @param other the Other bloom filter.
      * @return the Jaccard similarity.
      */
-    public double jaccardSimilarity( BloomFilter other ) {
-        verifyShape( other );
-        int orCard = orCardinality( other );
-        if (orCard == 0)
-        {
+    public double jaccardSimilarity(BloomFilter other) {
+        verifyShape(other);
+        int orCard = orCardinality(other);
+        if (orCard == 0) {
             return 0;
         }
-        return hammingDistance( other ) / (double) orCard;
+        return hammingDistance(other) / (double) orCard;
     }
 
     /**
      * Gets the jaccard distance to the other Bloom filter.
+     * 
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
-    public final double jaccardDistance( BloomFilter other ) {
-        return 1.0 - jaccardSimilarity( other );
+    public final double jaccardDistance(BloomFilter other) {
+        return 1.0 - jaccardSimilarity(other);
     }
 
     /**
      * Gets the Cosine similarity wih the other Bloom filter.
+     * 
      * @param other the Other bloom filter.
      * @return the Cosine similarity.
      */
-    public double cosineSimilarity( BloomFilter other ) {
-        verifyShape( other );
-        return andCardinality( other ) / (Math.sqrt( cardinality() ) * Math.sqrt( other.cardinality()));
+    public double cosineSimilarity(BloomFilter other) {
+        verifyShape(other);
+        return andCardinality(other) / (Math.sqrt(cardinality()) * Math.sqrt(other.cardinality()));
     }
 
     /**
      * Gets the jaccard distance to the other Bloom filter.
+     * 
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
-    public final double cosineDistance( BloomFilter other ) {
-        return 1.0 - cosineSimilarity( other );
+    public final double cosineDistance(BloomFilter other) {
+        return 1.0 - cosineSimilarity(other);
     }
 
     /**
      * Estimates the number of items in the Bloom filter based on the shape and the
      * number of bits that are enabled.
-     * @return and estimate of the number of items that were placed in the Bloom filter.
+     * 
+     * @return and estimate of the number of items that were placed in the Bloom
+     *         filter.
      */
     public final long estimateSize() {
-        double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions()) *
-            Math.log(1.0 - (hammingValue() * 1.0 / getShape().getNumberOfBits()));
-        return Math.round( estimate );
+        double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions())
+                * Math.log(1.0 - (hammingValue() * 1.0 / getShape().getNumberOfBits()));
+        return Math.round(estimate);
     }
 
     /**
-     * Estimates the number of items in the union of the sets of items that created the bloom filters.
+     * Estimates the number of items in the union of the sets of items that created
+     * the bloom filters.
      *
      * @param other the other Bloom filter.
      * @return an estimate of the size of the union between the two filters.
      */
     public final long estimateUnionSize(BloomFilter other) {
-        verifyShape( other );
-        double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions()) *
-            Math.log(1 - orCardinality(other) * 1.0 / getShape().getNumberOfBits());
-        return Math.round( estimate );
+        verifyShape(other);
+        double estimate = -(getShape().getNumberOfBits() * 1.0 / getShape().getNumberOfHashFunctions())
+                * Math.log(1 - orCardinality(other) * 1.0 / getShape().getNumberOfBits());
+        return Math.round(estimate);
     }
 
     /**
-     * Estimates the number of items in the intersection of the sets of items that created the bloom filters.
+     * Estimates the number of items in the intersection of the sets of items that
+     * created the bloom filters.
      *
      * @param other the other Bloom filter.
      * @return an estimate of the size of the intersection between the two filters.
      */
     public final long estimateIntersectionSize(BloomFilter other) {
-        verifyShape( other );
+        verifyShape(other);
         // do subtraction early to avoid Long overflow.
         return estimateSize() - estimateUnionSize(other) + other.estimateSize();
     }
 
     /**
-     * Determines if the bloom filter is "full".
-     * Full is definded as haveing no unset bits.
+     * Determines if the bloom filter is "full". Full is definded as haveing no
+     * unset bits.
+     * 
      * @param filter the filter to check.
      * @return true if the filter is full.
      */
@@ -310,29 +379,43 @@ public abstract class BloomFilter {
 
     /**
      * The definition of a filter configuration. A simple Bloom filter configuration
-     * implementation that derives the values from the number of items and the probability of
-     * collision.
+     * implementation that derives the values from the number of items and the
+     * probability of collision.
      *
-     * <p> This interface defines the values for the filter configuration and is used to
-     * convert a ProtoBloomFilter into a BloomFilter. </p>
+     * <p>
+     * This interface defines the values for the filter configuration and is used to
+     * convert a ProtoBloomFilter into a BloomFilter.
+     * </p>
      *
-     * <p> This class contains the values for the filter configuration and is used to convert
-     * a ProtoBloomFilter into a BloomFilter. </p>
+     * <p>
+     * This class contains the values for the filter configuration and is used to
+     * convert a ProtoBloomFilter into a BloomFilter.
+     * </p>
      *
      * <h2>Interrelatedness of values</h2>
      *
-     *  <dl>
-     *  <dt>Number of Items (AKA: {@code n})</dt>
-     *  <dd>{@code n = ceil(m / (-k / log(1 - exp(log(p) / k))))}</dd>
-     *  <dt>Probability of Collision (AKA: {@code p})</dt>
-     *  <dd>{@code p =  (1 - exp(-kn/m))^k}</dd>
-     *  <dt>Number of Bits (AKA: {@code m})</dt>
-     *  <dd>{@code m = ceil((n * log(p)) / log(1 / pow(2, log(2))))}</dd>
-     *  <dt>Number of Functions (AKA: {@code k})</dt>
-     *  <dd>{@code k = round((m / n) * log(2))}</dd>
-     *  </dl>
-     * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter calculator</a>
-     * @see <a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filter [Wikipedia]</a>
+     * <dl>
+     * <dt>Number of Items (AKA: {@code n})</dt>
+     * <dd>{@code n = ceil(m / (-k / log(1 - exp(log(p) / k))))}</dd>
+     * <dt>Probability of Collision (AKA: {@code p})</dt>
+     * <dd>{@code p =  (1 - exp(-kn/m))^k}</dd>
+     * <dt>Number of Bits (AKA: {@code m})</dt>
+     * <dd>{@code m = ceil((n * log(p)) / log(1 / pow(2, log(2))))}</dd>
+     * <dt>Number of Functions (AKA: {@code k})</dt>
+     * <dd>{@code k = round((m / n) * log(2))}</dd>
+     * </dl>
+     *
+     * <h2>Comparisons</h2>
+     * <p>
+     * For purposes of equality checking and hashCode calculations a {@code Shape}
+     * is defined by the hashing function name, the number of bits ({@code m}), and
+     * the number of functions ({@code k}).
+     * </p>
+     *
+     * @see <a href="http://hur.st/bloomfilter?n=3&p=1.0E-5">Bloom Filter
+     *      calculator</a>
+     * @see <a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filter
+     *      [Wikipedia]</a>
      */
     public static class Shape {
 
@@ -350,11 +433,7 @@ public abstract class BloomFilter {
          */
         private final int numberOfItems;
         /**
-         * probability of false positives. (AKA: {@code p})
-         */
-        private final double probability;
-        /**
-         * number of bits in the filter.  (AKA: {@code m})
+         * number of bits in the filter. (AKA: {@code m})
          */
         private final int numberOfBits;
         /**
@@ -373,14 +452,18 @@ public abstract class BloomFilter {
         private final String hasherName;
 
         /**
-         * Create a filter configuration with the specified number of items and probability.
+         * Create a filter configuration with the specified number of items and
+         * probability.
          * <p>
-         * The actual probability will be approximately equal to the desired probability but will
-         * be dependent upon the caluclated bloom filter size and function count.
+         * The actual probability will be approximately equal to the desired probability
+         * but will be dependent upon the caluclated bloom filter size and function
+         * count.
          * </p>
-         * @param hasher The Hasher function to use for this shape.
+         * 
+         * @param hasher        The Hasher function to use for this shape.
          * @param numberOfItems Number of items to be placed in the filter.
-         * @param probability The desired probability of duplicates. Must be in the range (0.0,1.0).
+         * @param probability   The desired probability of duplicates. Must be in the
+         *                      range (0.0,1.0).
          */
         public Shape(Hasher hasher, final int numberOfItems, final double probability) {
             if (hasher == null) {
@@ -405,18 +488,22 @@ public abstract class BloomFilter {
             if (m > Integer.MAX_VALUE) {
                 throw new IllegalArgumentException("Resulting filter has more than " + Integer.MAX_VALUE + " bits");
             }
-            this.numberOfBits = (int)m;
-            numberOfHashFunctions = calculateNumberOfHashFunctions( numberOfItems, numberOfBits );
-            this.probability = calculateProbability( numberOfItems, numberOfBits, numberOfHashFunctions );
-            hashCode = Objects.hash(hasherName, numberOfBits, numberOfHashFunctions, numberOfItems, probability);
+            this.numberOfBits = (int) m;
+            numberOfHashFunctions = calculateNumberOfHashFunctions(numberOfItems, numberOfBits);
+            hashCode = generateHashCode();
+        }
+
+        private final int generateHashCode() {
+            return Objects.hash(hasherName, numberOfBits, numberOfHashFunctions);
         }
 
         /**
-         * Create a filter configuration with the specified number of items and probability.
+         * Create a filter configuration with the specified number of items and
+         * probability.
          *
-         * @param hasher The Hasher function to use for this shape.
+         * @param hasher        The Hasher function to use for this shape.
          * @param numberOfItems Number of items to be placed in the filter.
-         * @param numberOfBits The number of bits in the filter.
+         * @param numberOfBits  The number of bits in the filter.
          */
         public Shape(final Hasher hasher, final int numberOfItems, final int numberOfBits) {
             if (hasher == null) {
@@ -432,19 +519,20 @@ public abstract class BloomFilter {
             this.numberOfItems = numberOfItems;
             this.numberOfBits = numberOfBits;
             this.numberOfHashFunctions = calculateNumberOfHashFunctions(numberOfItems, numberOfBits);
-            this.probability = calculateProbability( numberOfItems, numberOfBits, numberOfHashFunctions );
-            hashCode = Objects.hash(hasherName, numberOfBits, numberOfHashFunctions, numberOfItems, probability);
+            hashCode = generateHashCode();
         }
 
         /**
-         * Create a filter configuration with the specified number of items and probability.
+         * Create a filter configuration with the specified number of items and
+         * probability.
          *
-         * @param hasher The Hasher function to use for this shape.
-         * @param numberOfItems Number of items to be placed in the filter.
-         * @param numberOfBits The number of bits in the filter.
+         * @param hasher                The Hasher function to use for this shape.
+         * @param numberOfItems         Number of items to be placed in the filter.
+         * @param numberOfBits          The number of bits in the filter.
          * @param numberOfHashFunctions The number of hash functions in the filter.
          */
-        public Shape(final Hasher hasher, final int numberOfItems, final int numberOfBits, final int numberOfHashFunctions) {
+        public Shape(final Hasher hasher, final int numberOfItems, final int numberOfBits,
+                final int numberOfHashFunctions) {
             if (hasher == null) {
                 throw new IllegalArgumentException("Hasher may not be null");
             }
@@ -454,27 +542,28 @@ public abstract class BloomFilter {
             if (numberOfBits < 8) {
                 throw new IllegalArgumentException("Number of Bits must be greater than or equal to 8");
             }
-            if (numberOfHashFunctions < 1)
-            {
+            if (numberOfHashFunctions < 1) {
                 throw new IllegalArgumentException("Number of Hash Functions must be greater than or equal to 8");
             }
             this.hasherName = hasher.getName();
             this.numberOfItems = numberOfItems;
             this.numberOfBits = numberOfBits;
             this.numberOfHashFunctions = numberOfHashFunctions;
-            this.probability = calculateProbability( numberOfItems, numberOfBits, numberOfHashFunctions );
-            hashCode = Objects.hash(hasherName, numberOfBits, numberOfHashFunctions, numberOfItems, probability);
+            hashCode = generateHashCode();
         }
 
         /**
-         * Create a filter configuration with the specified number of items and probability.
+         * Create a filter configuration with the specified number of items and
+         * probability.
          *
-         * @param hasher The Hasher function to use for this shape.
-         * @param probability The probability of duplicates. Must be in the range (0.0,1.0).
-         * @param numberOfBits The number of bits in the filter.
+         * @param hasher                The Hasher function to use for this shape.
+         * @param probability           The probability of duplicates. Must be in the
+         *                              range (0.0,1.0).
+         * @param numberOfBits          The number of bits in the filter.
          * @param numberOfHashFunctions The number of hash functions in the filter.
          */
-        public Shape(final Hasher hasher, final double probability, final int numberOfBits, final int numberOfHashFunctions) {
+        public Shape(final Hasher hasher, final double probability, final int numberOfBits,
+                final int numberOfHashFunctions) {
             if (hasher == null) {
                 throw new IllegalArgumentException("Hasher may not be null");
             }
@@ -494,10 +583,9 @@ public abstract class BloomFilter {
             this.numberOfBits = numberOfBits;
             this.numberOfHashFunctions = numberOfHashFunctions;
 
-
             // n = ceil(m / (-k / log(1 - exp(log(p) / k))))
-            double n = Math.ceil(numberOfBits /
-                (-numberOfHashFunctions / Math.log(1 - Math.exp(Math.log(probability) / numberOfHashFunctions))));
+            double n = Math.ceil(numberOfBits
+                    / (-numberOfHashFunctions / Math.log(1 - Math.exp(Math.log(probability) / numberOfHashFunctions))));
 
             // log of probability is always < 0
             // number of hash functions is >= 1
@@ -510,33 +598,34 @@ public abstract class BloomFilter {
             // similarly we can not produce a number greater than numberOfBits so we
             // do not have to check for Integer.MAX_VALUE either.
             this.numberOfItems = (int) n;
-            this.probability = calculateProbability( numberOfItems, numberOfBits, numberOfHashFunctions );
-            hashCode = Objects.hash(hasherName, numberOfBits, numberOfHashFunctions, numberOfItems, probability);
+            hashCode = generateHashCode();
         }
 
-        /**
-         * Verify that the other shape has the same hasher as this shape.
-         * @param other the other shape.
-         * @throws IllegalArgumentException if the hasher function names are not the same.
-         */
-        public final void verifyHasher( Shape other ) {
-            if ( !hasherName.equals( other.hasherName))
-            {
-               throw new IllegalArgumentException( String.format("hasher name %s does not equal hasher name %s",
-                       hasherName, other.hasherName));
-            }
-        }
+        // /**
+        // * Verify that the other shape has the same hasher as this shape.
+        // * @param other the other shape.
+        // * @throws IllegalArgumentException if the hasher function names are not the
+        // same.
+        // */
+        // public final void verifyHasher( Shape other ) {
+        // if ( !hasherName.equals( other.hasherName))
+        // {
+        // throw new IllegalArgumentException( String.format("hasher name %s does not
+        // equal hasher name %s",
+        // hasherName, other.hasherName));
+        // }
+        // }
 
         /**
-         * Calculates the number of hash functions given numberOfItems and  numberofBits.
-         * This is a method so that the calculation is consistent across all constructors.
+         * Calculates the number of hash functions given numberOfItems and numberofBits.
+         * This is a method so that the calculation is consistent across all
+         * constructors.
          *
          * @param numberOfItems the number of items in the filter.
-         * @param numberOfBits the number of bits in the filter.
+         * @param numberOfBits  the number of bits in the filter.
          * @return the optimal number of hash functions.
          */
-        private final int calculateNumberOfHashFunctions(int numberOfItems, int numberOfBits)
-        {
+        private final int calculateNumberOfHashFunctions(int numberOfItems, int numberOfBits) {
             /*
              * k = round((m / n) * log(2)) We change order so that we use real math rather
              * than integer math.
@@ -544,37 +633,41 @@ public abstract class BloomFilter {
             long k = Math.round(LOG_OF_2 * numberOfBits / numberOfItems);
             if (k < 1) {
                 throw new IllegalArgumentException(
-                    String.format("Filter to small: Calculated number of hash functions (%s) was less than 1", k));
+                        String.format("Filter to small: Calculated number of hash functions (%s) was less than 1", k));
             }
             /*
-             * normally we would check that numberofHashFunctions <= Integer.MAX_VALUE but since numberOfBits
-             * is at most Integer.MAX_VALUE the numerator of numberofHashFunctions is log(2) * Integer.MAX_VALUE
-             * = 646456992.9449 the value of k can not be above Integer.MAX_VALUE.
+             * normally we would check that numberofHashFunctions <= Integer.MAX_VALUE but
+             * since numberOfBits is at most Integer.MAX_VALUE the numerator of
+             * numberofHashFunctions is log(2) * Integer.MAX_VALUE = 646456992.9449 the
+             * value of k can not be above Integer.MAX_VALUE.
              */
             return (int) k;
         }
 
         /**
-         * Calculates the probability given numberOfItems, numberofBits and numberOfHashFunctions.
-         * This is a method so that the calculation is consistent across all constructors.
+         * Calculates the probability of false positives (AKA: {@code p} given
+         * numberOfItems, numberofBits and numberOfHashFunctions. This is a method so
+         * that the calculation is consistent across all constructors.
          *
-         * @param numberOfItems the number of items in the filter.
-         * @param numberOfBits the number of bits in the filter.
-         * @param numberOfHashFunctions the number of hash functions used to create the filter.
+         * @param numberOfItems         the number of items in the filter.
+         * @param numberOfBits          the number of bits in the filter.
+         * @param numberOfHashFunctions the number of hash functions used to create the
+         *                              filter.
          * @return the probability of collision.
          */
-        private final double calculateProbability(int numberOfItems, int numberOfBits, int numberOfHashFunctions) {
+        public final double getProbability() {
             // (1 - exp(-kn/m))^k
             double p = Math.pow(1.0 - Math.exp(-1.0 * numberOfHashFunctions * numberOfItems / numberOfBits),
-                numberOfHashFunctions);
+                    numberOfHashFunctions);
             /*
-             * We do not need to check for p < = since we only allow positive values for parameters
-             * and the closest we can come to exp(-kn/m) == 1 is exp(-1/Integer.MAX_INT) approx 0.9999999995343387
-             * so Math.pow( x, y ) will always be 0<x<1 and y>0
+             * We do not need to check for p < = since we only allow positive values for
+             * parameters and the closest we can come to exp(-kn/m) == 1 is
+             * exp(-1/Integer.MAX_INT) approx 0.9999999995343387 so Math.pow( x, y ) will
+             * always be 0<x<1 and y>0
              */
             if (p >= 1.0) {
                 throw new IllegalArgumentException(
-                    String.format("Calculated probability (%s) is greater than or equal to 1.0", p));
+                        String.format("Calculated probability (%s) is greater than or equal to 1.0", p));
             }
             return p;
         }
@@ -589,15 +682,6 @@ public abstract class BloomFilter {
         }
 
         /**
-         * Gets the probability of a false positive (collision). AKA: {@code p}
-         *
-         * @return the probability of a false positive.
-         */
-        public double getProbability() {
-            return probability;
-        }
-
-        /**
          * Gets the number of bits in the Bloom filter. AKA: {@code m}
          *
          * @return the number of bits in the Bloom filter.
@@ -607,7 +691,8 @@ public abstract class BloomFilter {
         }
 
         /**
-         * Gets the number of hash functions used to construct the filter. AKA: {@code k}
+         * Gets the number of hash functions used to construct the filter. AKA:
+         * {@code k}
          *
          * @return the number of hash functions used to construct the filter.
          */
@@ -628,11 +713,8 @@ public abstract class BloomFilter {
         public boolean equals(Object o) {
             if (o instanceof Shape) {
                 Shape other = (Shape) o;
-                return
-                    other.getHasherName().equals( getHasherName() ) &&
-                    other.getNumberOfBits() == getNumberOfBits() &&
-                    other.getNumberOfHashFunctions() == getNumberOfHashFunctions() &&
-                    other.getNumberOfItems() == getNumberOfItems() && other.getProbability() == getProbability();
+                return other.getHasherName().equals(getHasherName()) && other.getNumberOfBits() == getNumberOfBits()
+                        && other.getNumberOfHashFunctions() == getNumberOfHashFunctions();
             }
             return false;
         }
