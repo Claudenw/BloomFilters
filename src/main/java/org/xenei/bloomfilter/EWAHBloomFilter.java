@@ -20,6 +20,7 @@ package org.xenei.bloomfilter;
 import java.nio.LongBuffer;
 import java.util.BitSet;
 import java.util.PrimitiveIterator.OfInt;
+import java.util.function.IntConsumer;
 
 import org.xenei.bloomfilter.HasherFactory.Hasher;
 import org.xenei.bloomfilter.hasher.StaticHasher;
@@ -77,6 +78,17 @@ public class EWAHBloomFilter extends BloomFilter {
         verifyShape(other);
         bitSet = bitSet.or(new EWAHCompressedBitmap(other.getBits()));
     }
+
+    @Override
+    public void merge( Shape shape, Hasher hasher ) {
+        verifyShape( shape );
+        if ( ! shape.getHasherName().equals( hasher.getName() ))
+        {
+            throw new IllegalArgumentException( String.format("Hasher (%s) is not the sames as for shape (%s)", hasher.getName(), shape.getHasherName()));
+        }
+        hasher.getBits(shape).forEachRemaining((IntConsumer) bitSet::set );
+    }
+
 
     @Override
     public boolean contains(Shape shape, Hasher hasher) {

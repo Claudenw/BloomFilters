@@ -55,7 +55,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the LongBuffer representation of this filter.
-     * 
+     *
      * @return the LongBuffer representation of this filter.
      */
     public abstract LongBuffer getBits();
@@ -70,7 +70,7 @@ public abstract class BloomFilter {
 
     /**
      * Construct a Bloom filter with the specified shape.
-     * 
+     *
      * @param shape The shape.
      */
     protected BloomFilter(Shape shape) {
@@ -79,7 +79,7 @@ public abstract class BloomFilter {
 
     /**
      * Verify the other Bloom filter has the same shape as this Bloom filter.
-     * 
+     *
      * @param other the other filter to check.
      * @throws IllegalArgumentException if the shapes are not the same.
      */
@@ -89,7 +89,7 @@ public abstract class BloomFilter {
 
     /**
      * Verify the other Bloom filter has the same shape as this Bloom filter.
-     * 
+     *
      * @param other the other shape to check.
      * @throws IllegalArgumentException if the shapes are not the same.
      */
@@ -101,7 +101,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the shape of this filter.
-     * 
+     *
      * @return The shape of this filter.
      */
     public final Shape getShape() {
@@ -110,14 +110,28 @@ public abstract class BloomFilter {
 
     /**
      * Merge the other Bloom filter into this one.
-     * 
+     *
      * @param other the other Bloom filter.
      */
     abstract public void merge(BloomFilter other);
 
     /**
+     * Merge the decomposed Bloom filter defined by the shape and
+     * hasher into this Bloom filter.
+     * The Shape must match the shape of this filter.
+     * The hasher provides bit indexes to enable.
+     *
+     * @param shape the decomposed Bloom filter.
+     * @param hasher the hasher to provide the indexes.
+     * @throws IllegalArgumentException if the shape argument does not match the
+     *                                  shape of this filter, or if the hasher is
+     *                                  not the specified one
+     */
+    abstract public void merge(Shape shape, Hasher hasher);
+
+    /**
      * Gets the cardinality of this Bloom filter.
-     * 
+     *
      * @return the cardinality (number of enabled bits) in this filter.
      */
     public int cardinality() {
@@ -127,7 +141,7 @@ public abstract class BloomFilter {
     /**
      * Performs a logical "AND" with the other Bloom filter and returns the
      * cardinality of the result.
-     * 
+     *
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this AND other ).
      */
@@ -158,7 +172,7 @@ public abstract class BloomFilter {
     /**
      * Performs a logical "OR" with the other Bloom filter and returns the
      * cardinality of the result.
-     * 
+     *
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this OR other ).
      */
@@ -189,7 +203,7 @@ public abstract class BloomFilter {
     /**
      * Performs a logical "XOR" with the other Bloom filter and returns the
      * cardinality of the result.
-     * 
+     *
      * @param other the other Bloom filter.
      * @return the cardinality of the result of ( this XOR other ).
      */
@@ -219,7 +233,7 @@ public abstract class BloomFilter {
 
     /**
      * Performs a match check. Effectively this AND other == this.
-     * 
+     *
      * @param other the Other Bloom filter.
      * @return true if this filter matches the other.
      */
@@ -232,8 +246,9 @@ public abstract class BloomFilter {
      * Performs an inverse match check against a decomposed Bloom filter. The shape
      * must match the shape of this filter. The hasher provides bit indexes to check
      * for. Effectively decomposed AND this == decomposed.
-     * 
-     * @param Shape the Other Bloom filter.
+     *
+     * @param shape the Shape of the decomposed Bloom filter.
+     * @param hasher The hasher contianing the bits to check.
      * @return true if this filter matches the other.
      * @throws IllegalArgumentException if the shape argument does not match the
      *                                  shape of this filter, or if the hasher is
@@ -262,7 +277,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the Hamming value of this Bloom filter.
-     * 
+     *
      * @return the hamming value.
      */
     public int hammingValue() {
@@ -271,7 +286,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the Hamming distance to the other Bloom filter.
-     * 
+     *
      * @param other the Other bloom filter.
      * @return the Hamming distance.
      */
@@ -282,7 +297,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the Jaccard similarity wih the other Bloom filter.
-     * 
+     *
      * @param other the Other bloom filter.
      * @return the Jaccard similarity.
      */
@@ -297,7 +312,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the jaccard distance to the other Bloom filter.
-     * 
+     *
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
@@ -307,7 +322,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the Cosine similarity wih the other Bloom filter.
-     * 
+     *
      * @param other the Other bloom filter.
      * @return the Cosine similarity.
      */
@@ -318,7 +333,7 @@ public abstract class BloomFilter {
 
     /**
      * Gets the jaccard distance to the other Bloom filter.
-     * 
+     *
      * @param other the Other Bloom filter.
      * @return the jaccard distance.
      */
@@ -329,7 +344,7 @@ public abstract class BloomFilter {
     /**
      * Estimates the number of items in the Bloom filter based on the shape and the
      * number of bits that are enabled.
-     * 
+     *
      * @return and estimate of the number of items that were placed in the Bloom
      *         filter.
      */
@@ -369,7 +384,7 @@ public abstract class BloomFilter {
     /**
      * Determines if the bloom filter is "full". Full is definded as haveing no
      * unset bits.
-     * 
+     *
      * @param filter the filter to check.
      * @return true if the filter is full.
      */
@@ -459,7 +474,7 @@ public abstract class BloomFilter {
          * but will be dependent upon the caluclated bloom filter size and function
          * count.
          * </p>
-         * 
+         *
          * @param hasher        The Hasher function to use for this shape.
          * @param numberOfItems Number of items to be placed in the filter.
          * @param probability   The desired probability of duplicates. Must be in the

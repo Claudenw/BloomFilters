@@ -21,6 +21,7 @@ import java.nio.LongBuffer;
 import java.util.AbstractMap;
 import java.util.BitSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.Set;
@@ -133,16 +134,26 @@ public class CountingBloomFilter extends BloomFilter {
     @Override
     public void merge(BloomFilter other) {
         verifyShape(other);
-        merge(BitSet.valueOf(other.getBits()).stream().boxed());
+        merge(BitSet.valueOf(other.getBits()).stream().iterator());
+    }
+
+    @Override
+    public void merge( Shape shape, Hasher hasher ) {
+        verifyShape( shape );
+        if ( ! shape.getHasherName().equals( hasher.getName() ))
+        {
+            throw new IllegalArgumentException( String.format("Hasher (%s) is not the sames as for shape (%s)", hasher.getName(), shape.getHasherName()));
+        }
+        merge( hasher.getBits(shape) );
     }
 
     public void merge(CountingBloomFilter other) {
         verifyShape(other);
-        merge(other.counts.keySet().stream());
+        merge(other.counts.keySet().iterator());
     }
 
-    private void merge(Stream<Integer> idxStream) {
-        idxStream.forEach(idx -> {
+    private void merge(Iterator<Integer> iter) {
+        iter.forEachRemaining(idx -> {
             Integer val = counts.get(idx);
             counts.put(idx, val == null ? 1 : val + 1);
         });

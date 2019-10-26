@@ -79,7 +79,7 @@ public class HasherFactory {
      * each call. The func may use the seed as part of the calculation or simply use
      * it to detect when the buffer has changed.
      * </p>
-     * 
+     *
      * @see #getHasher(String)
      * @param func the Func to register.
      * @throws SecurityException     if the no argument constructor can not be
@@ -95,7 +95,7 @@ public class HasherFactory {
 
     /**
      * Lists all registered Funcs.
-     * 
+     *
      * @return the list of all registered Func names.
      */
     public static Set<String> listFuncs() {
@@ -134,7 +134,7 @@ public class HasherFactory {
 
     /**
      * Gets the specified hasher.
-     * 
+     *
      * @param funcName the name of the hasher to create.
      * @return the Hasher
      * @throws IllegalArgumentException if the funcName is not registered.
@@ -156,7 +156,7 @@ public class HasherFactory {
 
         /**
          * Gets the name of the function.
-         * 
+         *
          * @return the name of the function being used.
          */
         public String getName();
@@ -168,7 +168,7 @@ public class HasherFactory {
          * Once this method is called the Hasher is locked and no further properties may
          * be added.
          * </p>
-         * 
+         *
          * @param shape the shape of the desired Bloom filter.
          * @return the interator of integers;
          * @throws IllegalArgumentException if {@code shape,getHasherName()} does not
