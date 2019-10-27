@@ -28,7 +28,9 @@ import org.xenei.bloomfilter.hasher.StaticHasher;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 
 /**
- * A bloom filter.
+ * A bloom filter that uses EWAH compressed bitmaps to store enabled bits.
+ * This filter is a good choice for large filters (high m value) with
+ * a relatively low number of functions (k value).
  *
  */
 public class EWAHBloomFilter extends BloomFilter {
@@ -37,6 +39,27 @@ public class EWAHBloomFilter extends BloomFilter {
      * The bitset that defines this BloomFilter.
      */
     private EWAHCompressedBitmap bitSet;
+
+    /**
+     * Constructs a filter from a hasher and shape.
+     * @param hasher the hasher to use
+     * @param shape the shape.
+     */
+    public EWAHBloomFilter(Hasher hasher, Shape shape) {
+        this(shape);
+        verifyHasher(hasher);
+        hasher.getBits(shape).forEachRemaining((IntConsumer) bitSet::set);
+    }
+
+    /**
+     * Constructors an empty filter with the prescribed shape.
+     *
+     * @param shape The BloomFilter.Shape to define this BloomFilter.
+     */
+    public EWAHBloomFilter(Shape shape) {
+        super(shape);
+        this.bitSet = new EWAHCompressedBitmap();
+    }
 
     @Override
     public StaticHasher getHasher() {
@@ -50,28 +73,6 @@ public class EWAHBloomFilter extends BloomFilter {
         return LongBuffer.wrap(bs.toLongArray());
     }
 
-    public EWAHBloomFilter(Hasher hasher, Shape shape) {
-        super(shape);
-        if (!hasher.getName().equals(shape.getHasherName())) {
-            throw new IllegalArgumentException(
-                    String.format("Hasher names do not match %s != %s", hasher.getName(), shape.getHasherName()));
-        }
-        this.bitSet = new EWAHCompressedBitmap();
-        OfInt iter = hasher.getBits(shape);
-        while (iter.hasNext()) {
-            bitSet.set(iter.nextInt());
-        }
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param shape The BloomFilter.Shape to define this BloomFilter.
-     */
-    public EWAHBloomFilter(Shape shape) {
-        super(shape);
-        this.bitSet = new EWAHCompressedBitmap();
-    }
 
     @Override
     public void merge(BloomFilter other) {
@@ -88,7 +89,6 @@ public class EWAHBloomFilter extends BloomFilter {
         }
         hasher.getBits(shape).forEachRemaining((IntConsumer) bitSet::set );
     }
-
 
     @Override
     public boolean contains(Shape shape, Hasher hasher) {
@@ -117,25 +117,59 @@ public class EWAHBloomFilter extends BloomFilter {
     }
 
     /**
-     * Merge this bloom filter with the other creating a new filter.
+     * Merge an EWAHBloomFilter into this one.
+     * <p>
+     * This method takes advantage of the internal structure
+     * of the EWAHBloomFilter.
+     * </p>
      *
-     * @param other the other filter.
+     * @param other the other EWAHBloomFilter filter.
      */
     public void merge(EWAHBloomFilter other) {
         verifyShape(other);
         bitSet = bitSet.or(other.bitSet);
     }
 
+    /**
+     * Calculate the andCardinality with another EWAHBloomFilter.
+     * <p>
+     * This method takes advantage of the internal structure
+     * of the EWAHBloomFilter.
+     * </p>
+     *
+     * @param other the other EWAHBloomFilter filter.
+     * @see #andCardinality(BloomFilter)
+     */
     public int andCardinality(EWAHBloomFilter other) {
         verifyShape(other);
         return bitSet.andCardinality(other.bitSet);
     }
 
+    /**
+     * Calculate the orCardinality with another EWAHBloomFilter.
+     * <p>
+     * This method takes advantage of the internal structure
+     * of the EWAHBloomFilter.
+     * </p>
+     *
+     * @param other the other EWAHBloomFilter filter.
+     * @see #orCardinality(BloomFilter)
+     */
     public int orCardinality(EWAHBloomFilter other) {
         verifyShape(other);
         return bitSet.orCardinality(other.bitSet);
     }
 
+    /**
+     * Calculate the xorCardinality with another EWAHBloomFilter.
+     * <p>
+     * This method takes advantage of the internal structure
+     * of the EWAHBloomFilter.
+     * </p>
+     *
+     * @param other the other EWAHBloomFilter filter.
+     * @see #xorCardinality(BloomFilter)
+     */
     public int xorCardinality(EWAHBloomFilter other) {
         verifyShape(other);
         return bitSet.xorCardinality(other.bitSet);

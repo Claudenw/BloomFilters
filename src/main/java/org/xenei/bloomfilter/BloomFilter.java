@@ -25,25 +25,10 @@ import java.util.PrimitiveIterator.OfInt;
 import org.xenei.bloomfilter.HasherFactory.Hasher;
 import org.xenei.bloomfilter.hasher.StaticHasher;
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 /**
- * The interface that defines a bloom filter.
+ * An abstract Bloom filter providing default implementations for
+ * most Bloom filter functions.  Specific implementations are encouraged
+ * to override the methods that can be more efficiently implemented.
  *
  */
 public abstract class BloomFilter {
@@ -98,6 +83,19 @@ public abstract class BloomFilter {
             throw new IllegalArgumentException("Other does not have same shape");
         }
     }
+
+    /**
+     * Verifies that the hasher has the same name as the shape.
+     * @param hasher the Hasher to check
+     */
+    protected final void verifyHasher( Hasher hasher )
+    {
+        if ( ! shape.getHasherName().equals( hasher.getName() ))
+        {
+            throw new IllegalArgumentException( String.format("Hasher (%s) is not the sames as for shape (%s)", hasher.getName(), shape.getHasherName()));
+        }
+    }
+
 
     /**
      * Gets the shape of this filter.

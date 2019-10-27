@@ -37,6 +37,7 @@ import org.xenei.bloomfilter.hasher.ObjectsHash;
 /**
  * A factory that produces Hashers.
  *
+ * <ul>
  * <li>A Hasher may be registered with the HasherFactory
  * class via the static method {@code HasherFactory.register( String, Class<? extends ToLongBiFunction<ByteBuffer, Integer>> )}.</li>
  * <li>Hashers may be retrieved via the static method
@@ -44,6 +45,7 @@ import org.xenei.bloomfilter.hasher.ObjectsHash;
  * during the {@code HasherFactory.register()} call.</li>
  * <li>The names of all registered Hashers can be listed by calling the static method
  * {@code HasherFactory.listHashers()}.</li>
+ * </ul>
  * <p>
  * The Hasher is guaranteed to have the Hashers defiend in the the
  * {@code org.xenei.bloomfilter.hasher} package registered.
@@ -55,7 +57,7 @@ public class HasherFactory {
 
     static {
         funcMap = new HashMap<String, Constructor<? extends ToLongBiFunction<ByteBuffer, Integer>>>();
-        resetFuncs();
+        reset();
     }
 
     /**
@@ -94,17 +96,17 @@ public class HasherFactory {
     /**
      * Lists all registered Hashers.
      *
-     * @return the list of all registered Func names.
+     * @return the list of all registered Hasher names.
      */
     public static Set<String> listFuncs() {
         return Collections.unmodifiableSet(funcMap.keySet());
     }
 
     /**
-     * Reset registered Funcs to initial known set.
+     * Reset registered Hahsers to initial known set.
      *
      */
-    public static void resetFuncs() {
+    public static void reset() {
         funcMap.clear();
         try {
             register(MD5.name, MD5.class);
@@ -177,7 +179,8 @@ public class HasherFactory {
 
         /**
          * Return an iterator of integers that are the bits to enable in the Bloom
-         * filter based on the shape.
+         * filter based on the shape.  No guarantee is made as to order
+         * or duplication of values.
          *
          * @param shape the shape of the desired Bloom filter.
          * @return the Iterator of integers;

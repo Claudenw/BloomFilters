@@ -28,7 +28,9 @@ import org.xenei.bloomfilter.hasher.StaticHasher;
 
 
 /**
- * A bloom filter.
+ * A bloom filter using a Java BitSet to track enabled bits.
+ * This is a standard implementation and should work well for most
+ * Bloom filters.
  *
  */
 public class BitSetBloomFilter extends BloomFilter {
@@ -50,18 +52,9 @@ public class BitSetBloomFilter extends BloomFilter {
     }
 
     public BitSetBloomFilter(Hasher hasher, Shape shape) {
-        super( shape );
-        if (!hasher.getName().equals( shape.getHasherName() ))
-        {
-            throw new IllegalArgumentException(
-                    String.format("Hasher names do not match %s != %s", hasher.getName(), shape.getHasherName()));
-        }
-        this.bitSet = new BitSet();
-        OfInt iter = hasher.getBits(shape);
-        while (iter.hasNext())
-        {
-            bitSet.set( iter.nextInt() );
-        }
+        this( shape );
+        verifyHasher(hasher);
+        hasher.getBits(shape).forEachRemaining((IntConsumer) bitSet::set);
     }
 
     /**
@@ -111,9 +104,14 @@ public class BitSetBloomFilter extends BloomFilter {
     }
 
     /**
-     * Merge this bloom filter with the other creating a new filter.
+     * Merge another BitSetBloomFilter into this one.
+     * <p>
+     * This mehtod takes advantage of internal structures of
+     * BitSetBloomFilter.
+     * </p>
      *
-     * @param other the other filter.
+     * @param other the other BitSetBloomFilter.
+     * @see #merge(BloomFilter)
      */
     public void merge(BitSetBloomFilter other) {
         verifyShape( other );
@@ -132,6 +130,16 @@ public class BitSetBloomFilter extends BloomFilter {
     }
 
 
+    /**
+     * Calculates the andCardinality with another BitSetBloomFilter.
+     * <p>
+     * This method takes advantage of internal structures of
+     * BitSetBloomFilter.
+     * </p>
+     *
+     * @param other the other BitSetBloomFilter.
+     * @see #andCardinality(BloomFilter)
+     */
     public int andCardinality(BitSetBloomFilter other) {
         verifyShape( other );
         BitSet result = (BitSet) bitSet.clone();
@@ -140,6 +148,16 @@ public class BitSetBloomFilter extends BloomFilter {
     }
 
 
+    /**
+     * Calculates the orCardinality with another BitSetBloomFilter.
+     * <p>
+     * This method takes advantage of internal structures of
+     * BitSetBloomFilter.
+     * </p>
+     *
+     * @param other the other BitSetBloomFilter.
+     * @see #orCardinality(BloomFilter)
+     */
     public int orCardinality(BitSetBloomFilter other) {
         verifyShape( other );
         BitSet result = (BitSet) bitSet.clone();
@@ -147,6 +165,16 @@ public class BitSetBloomFilter extends BloomFilter {
         return result.cardinality();
     }
 
+    /**
+     * Calculates the xorCardinality with another BitSetBloomFilter.
+     * <p>
+     * This method takes advantage of internal structures of
+     * BitSetBloomFilter.
+     * </p>
+     *
+     * @param other the other BitSetBloomFilter.
+     * @see #xorCardinality(BloomFilter)
+     */
     public int xorCardinality(BitSetBloomFilter other) {
         verifyShape( other );
         BitSet result = (BitSet) bitSet.clone();
