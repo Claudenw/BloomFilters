@@ -1,15 +1,10 @@
 package org.xenei.bloomfilter.hasher;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.PrimitiveIterator;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Consumer;
 import org.xenei.bloomfilter.BloomFilter.Shape;
 import org.xenei.bloomfilter.HasherFactory.Hasher;
 
@@ -20,25 +15,21 @@ import org.xenei.bloomfilter.HasherFactory.Hasher;
 public final class StaticHasher implements Hasher {
 
     /**
-     * The name of this hasher.
-     */
-    private final String name;
-    /**
      * The shape of this hasher
      */
     private final Shape shape;
     /**
-     * The list of values that this hasher will return.
+     * The ordered set of values that this hasher will return.
      */
-    private final List<Integer> values;
+    private final Set<Integer> values;
 
     /**
      * Constructs the StaticHasher from a DynamicHasher and a Shape.
-     * @param other the DynamicHasher to read.
+     * @param hasher the DynamicHasher to read.
      * @param shape the Shape for the resulting values.
      */
-    public StaticHasher(DynamicHasher other, Shape shape) {
-        this( other.getBits(shape), shape);
+    public StaticHasher(Hasher hasher, Shape shape) {
+        this( hasher.getBits(shape), shape);
     }
 
     /**
@@ -48,9 +39,8 @@ public final class StaticHasher implements Hasher {
      * @throws IllegalArgumentException if any Integer is outside the range [0,shape.getNumberOfBits())
      */
     public StaticHasher(Iterator<Integer> iter, Shape shape) {
-        this.name = shape.getHasherName();
         this.shape = shape;
-        Set<Integer> set = new TreeSet<Integer>();
+        this.values = new TreeSet<Integer>();
         iter.forEachRemaining( idx -> {
             if (idx >= shape.getNumberOfBits())
             {
@@ -59,10 +49,8 @@ public final class StaticHasher implements Hasher {
             if (idx < 0 ) {
                 throw new IllegalArgumentException( String.format( "Bit index (%s) may not be less than zero", idx ));
             }
-            set.add( idx );
+            values.add( idx );
         });
-        values = new ArrayList<Integer>(set);
-
     }
 
     /**
@@ -76,7 +64,15 @@ public final class StaticHasher implements Hasher {
 
     @Override
     public String getName() {
-        return name;
+        return shape.getHasherName();
+    }
+
+    /**
+     * Gets the the number of unique values in this hasher.
+     * @return the number of unique values.
+     */
+    public int size() {
+        return values.size();
     }
 
     /**
@@ -94,26 +90,34 @@ public final class StaticHasher implements Hasher {
         if (!this.shape.equals(shape)) {
             throw new IllegalArgumentException("shape does not match internal shape");
         }
-        return new Iter();
+        return new Iter(values.iterator());
     }
 
-    /**
-     * The iterator of integers.
-     */
-    private class Iter implements PrimitiveIterator.OfInt {
-        private int idx = 0;
+    public class Iter implements PrimitiveIterator.OfInt, Iterator<Integer> {
+
+        Iterator<Integer> wrapped;
+
+        Iter(Iterator<Integer> wrapped)
+        {
+            this.wrapped = wrapped;
+        }
 
         @Override
         public boolean hasNext() {
-            return idx < values.size();
+            return wrapped.hasNext();
         }
 
         @Override
         public int nextInt() {
-            if (hasNext()) {
-                return values.get(idx++);
-            }
-            throw new NoSuchElementException();
+            return wrapped.next();
         }
+
+        @Override
+        public Integer next() {
+            return wrapped.next();
+        }
+
+
+
     }
 }
