@@ -29,21 +29,9 @@ import org.xenei.bloomfilter.BloomFilter.Shape;
 import org.xenei.bloomfilter.HasherFactory.Hasher;
 
 /**
- * The class that performs hashing.
- * <p>
- * Hashers are known by their implementation of the Hasher.Func interface.
- * <ul>
- * <li>Each Hasher.Func has a unique name, and is registered with the Hasher
- * class via the static method {@code Hasher.register( Func func )}.</li>
- * <li>Hashers are retrieved via the static method
- * {@code Hasher.getHasher( String name )}, where name is the well known name of
- * the Hasher.Func.</li>
- * <li>The name of all known Funcs can be listed by calling the static method
- * {@code Hasher.listFuncs()}.</li>
- * <p>
- * The Hasher is guaranteed to have the Funcs defiend in the the
- * {@code org.xenei.bloomfilter.hasher} package registered.
- *
+ * The class that performs hashing on demand.  Items can be added to the hasher
+ * using the {@code with()} methods.  once {@code getBits()} method is called it
+ * is an error to call {@code with()} again.
  */
 public class DynamicHasher implements Hasher {
 
