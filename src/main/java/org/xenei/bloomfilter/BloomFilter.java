@@ -73,7 +73,7 @@ public abstract class BloomFilter {
     }
 
     /**
-     * Verify the other Bloom filter has the same shape as this Bloom filter.
+     * Verify the specified shape has the same shape as this Bloom filter.
      *
      * @param other the other shape to check.
      * @throws IllegalArgumentException if the shapes are not the same.
