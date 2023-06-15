@@ -14,27 +14,25 @@ import org.apache.commons.collections4.bloomfilter.Shape;
 
 public class MultidimensionalLayeredBloomFilter extends LayeredBloomFilter {
     private final long[][] map;
-    private int updating;
+    private int updatePos;
+    private BloomFilter updating;
     private boolean hitMax;
-    private final Predicate<BloomFilter> extendCheck;
     
-    public MultidimensionalLayeredBloomFilter(Shape shape, int maxDepth, Predicate<BloomFilter> extendCheck) {
-        super(shape, maxDepth);
-        this.extendCheck = extendCheck;
+    public MultidimensionalLayeredBloomFilter(Shape shape, int maxDepth, Predicate<LayeredBloomFilter> extendCheck) {
+        super(shape, maxDepth, extendCheck);
         map = new long[shape.getNumberOfBits()][BitMap.numberOfBitMaps(maxDepth)];
-    }
-    
-    protected Predicate<BloomFilter> getMerge() {
-        return this::doMerge;
     }
 
     protected boolean doMerge(BloomFilter bf) {
+        return updating.merge(bf);
+    }
+    /*
         int[] offset = {0};
         return bf.forEachBitMap( x-> {
             if (x != 0L) {
                 int off = offset[0];
-                long mask = BitMap.getLongBit(updating);
-                int idx = BitMap.getLongIndex( updating );
+                long mask = BitMap.getLongBit(updatePos);
+                int idx = BitMap.getLongIndex( updatePos );
                 for (int i=0;i<Long.SIZE;i++) {
                     if ((x & (1L << i)) != 0)
                     {
@@ -46,8 +44,13 @@ public class MultidimensionalLayeredBloomFilter extends LayeredBloomFilter {
             return true;
         });
     }
-
+*/
+    
+    @Override
     protected boolean doContains(BloomFilter bf) {
+        if (updating.contains(bf)) {
+            return true;
+        }
         int[] offset = {0};
         return bf.forEachBitMap( x-> {
             if (x != 0L) {
@@ -78,7 +81,7 @@ public class MultidimensionalLayeredBloomFilter extends LayeredBloomFilter {
         for (int i=0;i<shape.getNumberOfBits();i++) {
             Arrays.fill( map[i], 0L);
         }
-        updating = 0;
+        updatePos = 0;
     }
 
     @Override
@@ -94,15 +97,34 @@ public class MultidimensionalLayeredBloomFilter extends LayeredBloomFilter {
 
     @Override
     public void next() {
-        if (++updating >= maxDepth) {
+        // set the bits in the map
+        int[] offset = {0};
+        long mask = BitMap.getLongBit(updatePos);
+        int idx = BitMap.getLongIndex( updatePos );
+        updating.forEachBitMap( block-> {
+            if (block != 0L) {
+                int off = offset[0];
+                for (int i=0;i<Long.SIZE;i++) {
+                    if ((block & (1L << i)) != 0)
+                    {
+                        map[off+i][idx] |= mask;
+                    }
+                }
+            }
+            offset[0]+=Long.SIZE;
+            return true;
+        });
+        updating.clear();
+        if (++updatePos >= maxDepth) {
             hitMax = true;
-            updating = 0;
+            updatePos = 0;
         }
+        clear(updatePos);
     }
 
     @Override
     public int getDepth() {
-        return hitMax ? maxDepth : updating;
+        return hitMax ? maxDepth : updatePos;
     }
 
     @Override
@@ -137,8 +159,4 @@ public class MultidimensionalLayeredBloomFilter extends LayeredBloomFilter {
         }
         return true;
     }
-    
-    
-    
-
 }

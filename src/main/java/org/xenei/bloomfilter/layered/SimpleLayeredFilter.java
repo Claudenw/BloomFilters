@@ -17,28 +17,28 @@ import org.apache.commons.collections4.bloomfilter.Shape;
 
 public class SimpleLayeredFilter extends LayeredBloomFilter {
     private final List<BloomFilter> filters;
-    private final Predicate<BloomFilter> extendCheck;
     
     public SimpleLayeredFilter(final Shape shape, int maxDepth) {
         this( shape, maxDepth, (x)-> false );
     }
     
-    public SimpleLayeredFilter(final Shape shape, int maxDepth, Predicate<BloomFilter> extendCheck) {
-        super(shape, maxDepth);
+    public SimpleLayeredFilter(final Shape shape, int maxDepth, Predicate<LayeredBloomFilter> extendCheck) {
+        super(shape, maxDepth, extendCheck);
         this.filters = new ArrayList<BloomFilter>();
-        this.extendCheck = extendCheck;
         next();
+    }
+    @Override
+    public BloomFilter target() {
+        return filters.get(filters.size()-1);
     }
 
     @Override
-    public BloomFilter copy() {
-        BloomFilter merged = new SimpleBloomFilter(shape);
-        if (forEachBloomFilter( merged::merge )) {
-            return merged;
-        }
-        return new SparseBloomFilter(shape);
+    public SimpleLayeredFilter copy() {
+        SimpleLayeredFilter result = new SimpleLayeredFilter(shape, maxDepth, extendCheck);
+        result.filters.clear();
+        forEachBloomFilter( x -> result.filters.add(x.copy()));
+        return result;
     }
-
 
     @Override
     public void clear() {
@@ -46,21 +46,19 @@ public class SimpleLayeredFilter extends LayeredBloomFilter {
         next();
     }
 
+    @Override
     protected boolean doContains(BloomFilter bf) {
-        return filters.stream().anyMatch( x -> x.contains(bf));
-    }
-    
-    protected boolean doMerge(BloomFilter bf) {
-        BloomFilter target = filters.get(filters.size()-1);
-        if (extendCheck.test(target)) {
-            next();
-            target = filters.get(filters.size()-1);
+        if (bf instanceof LayeredBloomFilter) {
+            boolean[] result = {false};
+            // return false when we have found a match.
+            ((LayeredBloomFilter)bf).forEachBloomFilter( x -> {result[0] |= doContains(x); return result[0];});
+            return result[0];
         }
-        return target.merge(bf);
-      
+        return filters.stream().anyMatch( x -> { 
+            return x.contains(bf);});
     }
     
-
+       
     @Override
     public int cardinality() {
         return SetOperations.cardinality(this);
@@ -79,7 +77,7 @@ public class SimpleLayeredFilter extends LayeredBloomFilter {
     @Override
     public boolean forEachBloomFilter(Predicate<BloomFilter> bloomFilterPredicate) {
         for (BloomFilter bf : filters) {
-            if (bloomFilterPredicate.test(bf)) {
+            if (!bloomFilterPredicate.test(bf)) {
                 return false;
             }
         }
