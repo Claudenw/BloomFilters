@@ -22,10 +22,19 @@ public class StableShape {
     public final byte bitsPerCell;
     public final byte cellsPerByte;
 
+    /**
+     * Constructs an empty builder.
+     * @return an empty builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Constructs an builder with {@code k} and {@code m} based on the shape.
+     * @param shape to base the stable shape on.
+     * @return
+     */
     public static Builder builder(Shape shape) {
         return new Builder(shape);
     }
@@ -89,31 +98,62 @@ public class StableShape {
             setK(shape.getNumberOfHashFunctions()).setM(shape.getNumberOfBits());
         }
 
+        /**
+         * Sets the expected false positive rate.  if not set will be calculated from @{code k}.
+         * @param fps the expected false positive rate.
+         * @return this  for chaining.
+         */
         public Builder setFps(double fps) {
             this.fps = fps;
             return this;
         }
 
+        /**
+         * Sets the number of hashes for each Bloom filter. if not set will be calculated from @{code fps}.
+         * @param k the number of hashes for each filter.
+         * @return this for chaining.
+         */
         public Builder setK(int k) {
             this.k = k;
             return this;
         }
 
+        /**
+         * Sets the number of bits for each Bloom filter.  Must be greater than 1.
+         * @param m the number of bits for each Bloom filter.
+         * @return this for chaining.
+         */
         public Builder setM(int m) {
             this.m = m;
             return this;
         }
 
+        /**
+         * Sets the number of cells to decrement on each insertion.
+         * @param p the number of cells to decrement on each insertion.
+         * @return this for chaining.
+         */
         public Builder setP(int p) {
             this.p = p;
             return this;
         }
 
+        /**
+         * Sets the value to set in each cell on insertion.  Must be in the range [1,255]
+         * @param max the value to set eaach cell on insertion.
+         * @return this for chaining.
+         */
         public Builder setMax(int max) {
             this.max = max;
             return this;
         }
 
+        /**
+         * Sets the number of bits to be used for each insertion.  Setting this value will
+         * reset max to be the maximum value that will fit in the specified number of bits.
+         * @param d the number of bits to use.  Must be in the range [1,8].
+         * @return this for chaining.
+         */
         public Builder setD(int d) {
             if (d > Byte.SIZE || d < 1) {
                 throw new IllegalArgumentException("D must be in the range [1,8]");
@@ -123,7 +163,7 @@ public class StableShape {
         }
 
         private void checkSettings() {
-            if (m < 1) {
+            if (m <= 1) {
                 throw new IllegalArgumentException("M must be greater than 1");
             }
             if (k <= UNSET && fps <= UNSET) {

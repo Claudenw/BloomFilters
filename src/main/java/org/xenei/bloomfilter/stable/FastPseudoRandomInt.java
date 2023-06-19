@@ -39,11 +39,11 @@ public class FastPseudoRandomInt implements Hasher {
     public int nextInt(int limit) {
         int idx = BitMap.mod(index, limit);
         // Update index and handle wrapping
-        index -= increment;
+        index -= increment ;
 
         // Incorporate the counter into the increment to create a
         // tetrahedral number additional term, and handle wrapping.
-        increment -= count;
+        increment -= count++;
         return idx;
     }
 

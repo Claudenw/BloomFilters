@@ -146,16 +146,19 @@ public class StableBloomFilter implements BloomFilter {
     }
 
     @Override
-    public BloomFilter copy() {
+    public StableBloomFilter copy() {
+        return new StableBloomFilter( this.shape, this.buffer.copy() );
+    }
+    
+    public BloomFilter flatten() {
         BloomFilter bf = new SimpleBloomFilter(this.shape.getShape());
         bf.merge(this);
-        // return new StableBloomFilter(this.shape, this.buffer.copy());
         return bf;
     }
 
     private void decrement() {
         cardinality = -1;
-        idxFactory.uniqueIndices(shape.decrementShape).forEachIndex(x -> {
+        idxFactory.indices(shape.decrementShape).forEachIndex(x -> {
             buffer.decrement(x);
             return true;
         });
