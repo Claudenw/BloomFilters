@@ -2,25 +2,36 @@ package org.xenei.bloomfilter.stable;
 
 import org.apache.commons.collections4.bloomfilter.Shape;
 
-public class StableShape {
+public class StableShape implements BufferShape {
 
     private Shape shape;
     /**
      * The value to set the cell when it is enabled. In the paper this is called
      * "Max". resetValue = (2^bitsPerCell)-1
      */
-    public final int resetValue;
+    private final int resetValue;
+    /**
+     * The shape used when decrementing the filter.
+     */
     public final Shape decrementShape;
+    /**
+     * The cardinality expected when filter is stable.
+     */
     public final int expectedCardinality;
+    /**
+     * The false positive rate when filter is stable.
+     */
     public final double fps;
     /**
-     * Definition 2 (Stable Point). The stable point is defined as the limit of the
+     * The stable point is defined as the limit of the
      * expected fraction of 0s in an SBF when the number of iterations goes to
-     * infinity. When this limit is reached, we call SBF stable
+     * infinity. When this limit is reached, we call SBF stable.
      */
     public final double stablePoint;
-    public final byte bitsPerCell;
-    public final byte cellsPerByte;
+    /**
+     * The number of bits per cell/entry.
+     */
+    private final byte bitsPerCell;
 
     /**
      * Constructs an empty builder.
@@ -52,32 +63,57 @@ public class StableShape {
             }
         }
         this.bitsPerCell = (byte) bits;
-        this.cellsPerByte = (byte) (Byte.SIZE / bitsPerCell);
 
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
+        BufferShape.verifySettings(this);
     }
 
     @Override
     public String toString() {
         return String.format(
                 "StableShape[k=%s m=%s fps=%s stable point=%s expected cardinality=%s decrement count=%s reset value=%s]",
-                getNumberOfHashFunctions(), getNumberOfEntries(), fps, stablePoint, expectedCardinality,
+                getNumberOfHashFunctions(), numberOfCells(), fps, stablePoint, expectedCardinality,
                 decrementShape.getNumberOfHashFunctions(), resetValue);
     }
 
+    /**
+     * Gets the standard Bloom filter Shape for the stable Bloom filter.
+     * @return The standard Bloom filter shape.
+     */
     public Shape getShape() {
         return shape;
     }
 
+    /**
+     * Gets the number of hash functions used to construct the filter.
+     * This is also known as {@code k}.
+     *
+     * @return the number of hash functions used to construct the filter ({@code k}).
+     */
     int getNumberOfHashFunctions() {
         return shape.getNumberOfHashFunctions();
     }
 
-    int getNumberOfEntries() {
+    @Override
+    public int numberOfCells() {
         return shape.getNumberOfBits();
     }
 
+    @Override
+    public byte bitsPerCell() {
+        return bitsPerCell;
+    }
+
+    @Override
+    public int resetValue() {
+        return resetValue;
+    }
+
+    /**
+     * A builder class for the StableShape.
+     *
+     */
     public static class Builder {
         private static final int UNSET = 0;
         // false positive stable rate
@@ -191,6 +227,10 @@ public class StableShape {
             }
         }
 
+        /**
+         * Builds the StableShape.
+         * @return a new StableShape.
+         */
         public StableShape build() {
             checkSettings();
             return new StableShape(fps, m, k, p, max);

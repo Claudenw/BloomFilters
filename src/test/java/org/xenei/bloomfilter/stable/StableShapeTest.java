@@ -21,42 +21,42 @@ public class StableShapeTest {
     @Test
     public void resetValueTest() {
         underTest = StableShape.builder(testShape).build();
-        assertEquals(2, underTest.resetValue);
+        assertEquals(2, underTest.resetValue());
         underTest = StableShape.builder(testShape).setMax(128).build();
-        assertEquals(128, underTest.resetValue);
+        assertEquals(128, underTest.resetValue());
 
         underTest = StableShape.builder(testShape).setMax(250).build();
-        assertEquals(250, underTest.resetValue);
+        assertEquals(250, underTest.resetValue());
 
         assertThrows(IllegalArgumentException.class, () -> StableShape.builder(testShape).setMax(300).build());
         assertThrows(IllegalArgumentException.class, () -> StableShape.builder(testShape).setMax(0).build());
     }
 
     @Test
-    public void bitsPerEntryTest() {
-        assertEquals(2, StableShape.builder(testShape).build().bitsPerCell);
-        assertEquals(2, StableShape.builder(testShape).setMax(3).build().bitsPerCell);
-        assertEquals(3, StableShape.builder(testShape).setMax(4).build().bitsPerCell);
-        assertEquals(3, StableShape.builder(testShape).setMax(5).build().bitsPerCell);
-        assertEquals(3, StableShape.builder(testShape).setMax(6).build().bitsPerCell);
-        assertEquals(3, StableShape.builder(testShape).setMax(7).build().bitsPerCell);
-        assertEquals(4, StableShape.builder(testShape).setMax(8).build().bitsPerCell);
-        assertEquals(8, StableShape.builder(testShape).setMax(129).build().bitsPerCell);
-        assertEquals(8, StableShape.builder(testShape).setMax(255).build().bitsPerCell);
+    public void bitsPerCellTest() {
+        assertEquals(2, StableShape.builder(testShape).build().bitsPerCell());
+        assertEquals(2, StableShape.builder(testShape).setMax(3).build().bitsPerCell());
+        assertEquals(3, StableShape.builder(testShape).setMax(4).build().bitsPerCell());
+        assertEquals(3, StableShape.builder(testShape).setMax(5).build().bitsPerCell());
+        assertEquals(3, StableShape.builder(testShape).setMax(6).build().bitsPerCell());
+        assertEquals(3, StableShape.builder(testShape).setMax(7).build().bitsPerCell());
+        assertEquals(4, StableShape.builder(testShape).setMax(8).build().bitsPerCell());
+        assertEquals(8, StableShape.builder(testShape).setMax(129).build().bitsPerCell());
+        assertEquals(8, StableShape.builder(testShape).setMax(255).build().bitsPerCell());
     }
 
     @Test
-    public void entriesPerByteTest() {
-        assertEquals(4, StableShape.builder(testShape).build().cellsPerByte);
-        assertEquals(4, StableShape.builder(testShape).setMax(3).build().cellsPerByte);
-        assertEquals(2, StableShape.builder(testShape).setMax(4).build().cellsPerByte);
-        assertEquals(2, StableShape.builder(testShape).setMax(5).build().cellsPerByte);
-        assertEquals(2, StableShape.builder(testShape).setMax(6).build().cellsPerByte);
-        assertEquals(2, StableShape.builder(testShape).setMax(7).build().cellsPerByte);
-        assertEquals(2, StableShape.builder(testShape).setMax(8).build().cellsPerByte);
-        assertEquals(1, StableShape.builder(testShape).setMax(16).build().cellsPerByte);
-        assertEquals(1, StableShape.builder(testShape).setMax(129).build().cellsPerByte);
-        assertEquals(1, StableShape.builder(testShape).setMax(255).build().cellsPerByte);
+    public void cellsPerByteTest() {
+        assertEquals(4, StableShape.builder(testShape).build().cellsPerByte());
+        assertEquals(4, StableShape.builder(testShape).setMax(3).build().cellsPerByte());
+        assertEquals(2, StableShape.builder(testShape).setMax(4).build().cellsPerByte());
+        assertEquals(2, StableShape.builder(testShape).setMax(5).build().cellsPerByte());
+        assertEquals(2, StableShape.builder(testShape).setMax(6).build().cellsPerByte());
+        assertEquals(2, StableShape.builder(testShape).setMax(7).build().cellsPerByte());
+        assertEquals(2, StableShape.builder(testShape).setMax(8).build().cellsPerByte());
+        assertEquals(1, StableShape.builder(testShape).setMax(16).build().cellsPerByte());
+        assertEquals(1, StableShape.builder(testShape).setMax(129).build().cellsPerByte());
+        assertEquals(1, StableShape.builder(testShape).setMax(255).build().cellsPerByte());
     }
 
     @Test
@@ -71,8 +71,8 @@ public class StableShapeTest {
     }
 
     @Test
-    public void getNumberOfEntriesTest() {
-        assertEquals(17, StableShape.builder(testShape).build().getNumberOfEntries());
+    public void numberOfCellsTest() {
+        assertEquals(17, StableShape.builder(testShape).build().numberOfCells());
     }
 
     @Test
