@@ -7,15 +7,26 @@ import org.apache.commons.collections4.bloomfilter.BitMap;
 
 public abstract class AbstractBufferManager implements BufferManager {
 
-    protected final StableShape shape;
+    /**
+     * The BufferShape of the buffer.
+     */
+    protected final BufferShape shape;
+    /**
+     * The buffer.
+     */
     protected final byte[] buffer;
 
-    public static BufferManager instance(StableShape shape) {
-        byte entriesPerByte = (byte) (Byte.SIZE / shape.bitsPerCell);
+    /**
+     * Get a buffer manager based on the shape.
+     * @param shape the BufferShape to create.
+     * @return a BufferManager instance.
+     */
+    public static BufferManager instance(BufferShape shape) {
+        byte entriesPerByte = (byte) (Byte.SIZE / shape.bitsPerCell());
         return (entriesPerByte == 1) ? new Simple(shape) : new Packed(shape);
     }
 
-    private AbstractBufferManager(StableShape shape, int buffSize) {
+    private AbstractBufferManager(BufferShape shape, int buffSize) {
         this.shape = shape;
         this.buffer = new byte[buffSize];
     }
@@ -25,22 +36,37 @@ public abstract class AbstractBufferManager implements BufferManager {
         Arrays.fill(buffer, (byte) 0);
     }
 
-    protected byte asByte(int value) {
-        return (byte) (0xFF & value);
-    }
+    /**
+     * Convert an unsigned byte to an int.
+     * @param value The unsigned value to convert.
+     * @return the value as an int.
+     */
+//    protected int asInt(byte value) {
+//        return 0xFF & value;
+//    }
 
-    protected int asInt(byte value) {
-        return 0xFF & value;
-    }
+    /**
+     * Truncate an int as to an unsigned byte value.
+     * Values greater than 0xFF are truncated as value & 0xFF
+     * @param value the value to truncate.
+     * @return the unsigned byte value.
+     */
+//    protected int asInt(int value) {
+//        return 0xFF & value;
+//    }
 
-    protected int asInt(int value) {
-        return 0xFF & value;
-    }
-
+    /**
+     * A simple buffer that stores one byte per byte in the buffer.
+     *
+     */
     public static class Simple extends AbstractBufferManager {
 
-        Simple(StableShape shape) {
-            super(shape, shape.getNumberOfEntries());
+        /**
+         * Constructor
+         * @param shape the shape for the buffe.r
+         */
+        Simple(BufferShape shape) {
+            super(shape, shape.numberOfCells());
         }
 
         @Override
@@ -52,18 +78,18 @@ public abstract class AbstractBufferManager implements BufferManager {
 
         @Override
         public int get(int entry) {
-            return asInt(buffer[entry]);
+            return BufferShape.asInt(buffer[entry]);
         }
 
         @Override
         public void set(int entry) {
-            buffer[entry] = asByte(shape.resetValue);
+            buffer[entry] = BufferShape.asByte(shape.resetValue());
         }
 
         @Override
         public void decrement(int entry) {
             if (buffer[entry] != 0) {
-                buffer[entry] = asByte(asInt(buffer[entry]) - 1);
+                buffer[entry] = BufferShape.asByte(BufferShape.asInt(buffer[entry]) - 1);
             }
         }
 
@@ -74,19 +100,36 @@ public abstract class AbstractBufferManager implements BufferManager {
 
         @Override
         public void func(int entry, int value, IntBinaryOperator f) {
-            buffer[entry] = asByte(f.applyAsInt(get(entry), value));
+            buffer[entry] = BufferShape.asByte(f.applyAsInt(get(entry), value));
         }
     }
 
+    /**
+     * An implementation of BufferManager that packs multiple cells into a single byte of the buffer.
+     *
+     */
     public static class Packed extends AbstractBufferManager {
+        /**
+         * position of the Position value in a result array.
+         */
         private static final byte POSITION = 0;
+        /**
+         * position of the Offset value in a result array;
+         */
         private static final byte OFFSET = 1;
 
+        /**
+         * The mask for a single cell.
+         */
         private final byte mask;
 
-        Packed(StableShape shape) {
-            super(shape, (int) Math.ceil(shape.getNumberOfEntries() * 1.0 / shape.cellsPerByte));
-            this.mask = (byte) ((1 << shape.bitsPerCell) - 1);
+        /**
+         * Creates an empty packed buffer.
+         * @param shape the Buffer shape.
+         */
+        Packed(BufferShape shape) {
+            super(shape, (int) Math.ceil(shape.numberOfCells() * 1.0 / shape.cellsPerByte()));
+            this.mask = (byte) ((1 << shape.bitsPerCell()) - 1);
         }
 
         @Override
@@ -97,17 +140,22 @@ public abstract class AbstractBufferManager implements BufferManager {
         }
 
         /**
-         * Returns array of position and offset.
+         * Returns a result array of position and offset for the position of an entry.
          * 
          * @param entry the entry to locate.
          * @return int[] of position and offset
          */
         private int[] location(int entry) {
-            return new int[] { entry / shape.cellsPerByte, BitMap.mod(entry, shape.cellsPerByte) * shape.bitsPerCell };
+            return new int[] { entry / shape.cellsPerByte(), BitMap.mod(entry, shape.cellsPerByte()) * shape.bitsPerCell() };
         }
 
+        /**
+         * Returns value from a result array of position and offset
+         * @param location a result array of position and offset
+         * @return the value of the cell.
+         */
         private int get(int[] location) {
-            return asInt(((mask << location[OFFSET]) & buffer[location[POSITION]]) >> location[OFFSET]);
+            return ((mask << location[OFFSET]) & buffer[location[POSITION]]) >> location[OFFSET];
         }
 
         @Override
@@ -116,15 +164,20 @@ public abstract class AbstractBufferManager implements BufferManager {
 
         }
 
+        /**
+         * Sets a value for a result array of position and offset.
+         * @param location a result array of position and offset
+         * @param rawValue the value to set at the location.
+         */
         private void set(int[] location, int rawValue) {
             int value = rawValue << location[OFFSET];
             int reverseMask = ~(mask << location[OFFSET]);
-            buffer[location[POSITION]] = asByte((buffer[location[POSITION]] & reverseMask) | value);
+            buffer[location[POSITION]] = BufferShape.asByte((buffer[location[POSITION]] & reverseMask) | value);
         }
 
         @Override
         public void set(int entry) {
-            set(location(entry), shape.resetValue);
+            set(location(entry), shape.resetValue());
         }
 
         @Override
@@ -144,5 +197,4 @@ public abstract class AbstractBufferManager implements BufferManager {
             set(location, f.applyAsInt(get(location), value));
         }
     }
-
 }
