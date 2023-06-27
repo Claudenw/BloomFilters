@@ -8,17 +8,32 @@ import java.util.function.Predicate;
 
 import org.apache.commons.collections4.bloomfilter.AbstractBloomFilterTest;
 import org.apache.commons.collections4.bloomfilter.SparseBloomFilter;
+import org.apache.commons.collections4.bloomfilter.SimpleBloomFilter;
 import org.apache.commons.collections4.bloomfilter.TestingHashers;
 import org.apache.commons.collections4.bloomfilter.BloomFilter;
+import org.apache.commons.collections4.bloomfilter.DefaultBloomFilterTest;
 import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.IncrementingHasher;
 import org.apache.commons.collections4.bloomfilter.IndexProducer;
 import org.apache.commons.collections4.bloomfilter.Shape;
 import org.junit.jupiter.api.Test;
 
-public abstract class AbstractLayeredFilterTest<T extends LayeredBloomFilter> extends AbstractBloomFilterTest<T> {
+public class LayeredBloomFilterTest extends AbstractBloomFilterTest<LayeredBloomFilter> {
 
-    abstract T createLayeredFilter(Shape shape, int maxDepth, Predicate<LayeredBloomFilter> extendCheck);
+    public LayeredBloomFilter createLayeredFilter(Shape shape, int maxDepth, Predicate<LayerManager> extendCheck) {
+        return new LayeredBloomFilter( shape, new LayerManager(
+                LayerManager.FilterSupplier.simple(shape),
+                extendCheck,
+                LayerManager.Cleanup.onMaxSize(maxDepth)
+                ) );
+    }
+    
+
+    @Override
+    protected LayeredBloomFilter createEmptyFilter(Shape shape) {
+        return createLayeredFilter( shape, 10, LayerManager.ExtendCheck.ADVANCE_ON_POPULATED);
+    }
+
     
     protected BloomFilter makeFilter(int ... values) {
         return makeFilter(IndexProducer.fromIndexArray(values));
@@ -37,7 +52,7 @@ public abstract class AbstractLayeredFilterTest<T extends LayeredBloomFilter> ex
     }
     @Test
     public void testMultipleFilters() {
-        T filter = createLayeredFilter(getTestShape(), 10, LayeredBloomFilter.ADVANCE_ON_POPULATED );
+        LayeredBloomFilter filter = createLayeredFilter(getTestShape(), 10, LayerManager.ExtendCheck.ADVANCE_ON_POPULATED );
         filter.merge( TestingHashers.FROM1);
         filter.merge( TestingHashers.FROM11);
         assertEquals(2,filter.getDepth());
@@ -48,21 +63,34 @@ public abstract class AbstractLayeredFilterTest<T extends LayeredBloomFilter> ex
         assertFalse( filter.copy().contains(t1));
         assertTrue( filter.flatten().contains(t1));
     }
-    
+
     @Test
     public void testFind() {
-        T filter = createLayeredFilter(getTestShape(), 10, LayeredBloomFilter.ADVANCE_ON_POPULATED );
+        LayeredBloomFilter filter = createLayeredFilter(getTestShape(), 10, LayerManager.ExtendCheck.ADVANCE_ON_POPULATED );
         filter.merge( TestingHashers.FROM1);
         filter.merge( TestingHashers.FROM11);
         filter.merge( new IncrementingHasher(11, 2));
-        filter.merge( TestingHashers.populateFromHashersFrom1AndFrom11(filter));
+        filter.merge( TestingHashers.populateFromHashersFrom1AndFrom11(new SimpleBloomFilter(getTestShape())));
         int[] result = filter.find( TestingHashers.FROM1);
+        assertEquals( 2, result.length);
         assertEquals( 0, result[0] );
         assertEquals( 3, result[1] );
         result = filter.find( TestingHashers.FROM11);
+        assertEquals( 2, result.length);
         assertEquals( 1, result[0] );
         assertEquals( 3, result[1] );
     }
-   
-    
+
+    /**
+     * Tests that the estimated union calculations are correct.
+     */
+    @Test
+    public final void testEstimateUnionCrossTypes() {
+        final BloomFilter bf = createFilter(getTestShape(), TestingHashers.FROM1);
+        final BloomFilter bf2 = new DefaultBloomFilterTest.SparseDefaultBloomFilter(getTestShape());
+        bf2.merge(TestingHashers.FROM11);
+
+        assertEquals(2, bf.estimateUnion(bf2));
+        assertEquals(2, bf2.estimateUnion(bf));
+    }
 }
