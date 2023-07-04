@@ -10,20 +10,20 @@ import org.junit.jupiter.api.Test;
 
 public class SimpleBufferManagerTest {
 
-    private AbstractBufferManager underTest;
+    private AbstractCellManager underTest;
 
     // reset value of 128 ensures simple implementation
     private StableShape shape = StableShape.builder(Shape.fromNP(5, 1.0 / 5)).setMax(128).build();
 
     @Test
     public void lengthTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         assertEquals(17, underTest.buffer.length);
     }
 
     @Test
     public void clearTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.buffer[1] = (byte) 0xFF;
         underTest.buffer[3] = (byte) 0xFF;
         underTest.clear();
@@ -32,7 +32,7 @@ public class SimpleBufferManagerTest {
 
     @Test
     public void decrementTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.buffer[1] = (byte) 0xFF;
         underTest.buffer[3] = (byte) 5;
         underTest.decrement(1);
@@ -45,7 +45,7 @@ public class SimpleBufferManagerTest {
 
     @Test
     public void funcTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.func(0, 1, (x, y) -> x + y);
         assertEquals(1, underTest.buffer[0]);
         underTest.func(0, 1, (x, y) -> x + y);
@@ -55,7 +55,7 @@ public class SimpleBufferManagerTest {
 
     @Test
     public void getTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.buffer[1] = (byte) 0xFF;
         underTest.buffer[3] = (byte) 5;
         assertEquals(0, underTest.get(0));
@@ -65,7 +65,7 @@ public class SimpleBufferManagerTest {
 
     @Test
     public void isSetTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.buffer[1] = (byte) 0xFF;
         underTest.buffer[3] = (byte) 5;
         assertFalse(underTest.isSet(0));
@@ -77,7 +77,7 @@ public class SimpleBufferManagerTest {
 
     @Test
     public void setTest() {
-        underTest = new AbstractBufferManager.Simple(shape);
+        underTest = new AbstractCellManager.Simple(shape);
         underTest.set(1);
         underTest.set(3);
         assertThat(underTest.buffer).contains(0, 128, 0, 128, 0);

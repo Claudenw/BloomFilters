@@ -19,7 +19,7 @@ import org.apache.commons.collections4.bloomfilter.SimpleBloomFilter;
 public class StableBloomFilter implements BloomFilter {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
-    private final BufferManager buffer;
+    private final CellManager buffer;
     private int cardinality;
 
     /**
@@ -27,10 +27,10 @@ public class StableBloomFilter implements BloomFilter {
      * @param shape the Stable shape.
      */
     public StableBloomFilter(StableShape shape) {
-        this(shape, AbstractBufferManager.instance(shape));
+        this(shape, AbstractCellManager.instance(shape));
     }
 
-    private StableBloomFilter(StableShape shape, BufferManager buffer) {
+    private StableBloomFilter(StableShape shape, CellManager buffer) {
         this.shape = shape;
         this.idxFactory = new FastPseudoRandomInt();
         this.buffer = buffer;

@@ -2,7 +2,7 @@ package org.xenei.bloomfilter.stable;
 
 import org.apache.commons.collections4.bloomfilter.Shape;
 
-public class StableShape implements BufferShape {
+public class StableShape implements CellShape {
 
     private Shape shape;
     /**
@@ -66,7 +66,7 @@ public class StableShape implements BufferShape {
 
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
-        BufferShape.verifySettings(this);
+        CellShape.verifySettings(this);
     }
 
     @Override

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 public class PackedBufferManagerTest {
 
-    private AbstractBufferManager underTest;
+    private AbstractCellManager underTest;
     private int evenReset = 2; // 2 bits
     private int oddReset = 4; // 3 bits
     private Shape testShape = Shape.fromNP(5, 1.0 / 5);
@@ -18,31 +18,31 @@ public class PackedBufferManagerTest {
     @Test
     public void lengthTest() {
         StableShape shape = StableShape.builder(testShape).setMax(evenReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         assertEquals(5, underTest.buffer.length);
 
-        underTest = (AbstractBufferManager) AbstractBufferManager.instance(shape);
+        underTest = (AbstractCellManager) AbstractCellManager.instance(shape);
         assertEquals(5, underTest.buffer.length);
 
         shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         assertEquals(9, underTest.buffer.length);
 
-        underTest = (AbstractBufferManager) AbstractBufferManager.instance(shape);
+        underTest = (AbstractCellManager) AbstractCellManager.instance(shape);
         assertEquals(9, underTest.buffer.length);
     }
 
     @Test
     public void clearTest() {
         StableShape shape = StableShape.builder(testShape).setMax(evenReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0xCC;
         underTest.buffer[1] = (byte) 0xFF;
         underTest.clear();
         assertThat(underTest.buffer).containsOnly(0);
 
         shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0xCC;
         underTest.buffer[1] = (byte) 0xFF;
         underTest.clear();
@@ -52,7 +52,7 @@ public class PackedBufferManagerTest {
     @Test
     public void decrementEvenTest() {
         StableShape shape = StableShape.builder(testShape).setMax(evenReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0xFF;
         underTest.buffer[1] = (byte) 5;
         underTest.decrement(1);
@@ -84,7 +84,7 @@ public class PackedBufferManagerTest {
     @Test
     public void decrementOddTest() {
         StableShape shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0xFF;
         underTest.buffer[1] = (byte) 5;
         underTest.decrement(1);
@@ -140,7 +140,7 @@ public class PackedBufferManagerTest {
     @Test
     public void funcTest() {
         StableShape shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.func(0, 1, (x, y) -> x + y);
         assertEquals(1, underTest.buffer[0]);
         underTest.func(0, 1, (x, y) -> x + y);
@@ -150,7 +150,7 @@ public class PackedBufferManagerTest {
     @Test
     public void getTest() {
         StableShape shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0x1C;
         underTest.buffer[1] = (byte) 5;
         assertEquals(4, underTest.get(0));
@@ -161,7 +161,7 @@ public class PackedBufferManagerTest {
     @Test
     public void isSetTest() {
         StableShape shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.buffer[0] = (byte) 0xC5;
         underTest.buffer[1] = (byte) 5;
         assertTrue(underTest.isSet(0));
@@ -173,7 +173,7 @@ public class PackedBufferManagerTest {
     @Test
     public void setTest() {
         StableShape shape = StableShape.builder(testShape).setMax(oddReset).build();
-        underTest = new AbstractBufferManager.Packed(shape);
+        underTest = new AbstractCellManager.Packed(shape);
         underTest.set(0);
         underTest.set(1);
         underTest.set(2);

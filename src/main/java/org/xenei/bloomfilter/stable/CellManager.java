@@ -6,7 +6,7 @@ import java.util.function.IntBinaryOperator;
  * A manager for Bloom filter buffers where the number of bits used for a cell is in the range of [1,8] bits.
  *
  */
-public interface BufferManager {
+public interface CellManager {
 
     /**
      * gets the value of the cell.
@@ -51,6 +51,16 @@ public interface BufferManager {
      * Makes a copy of the buffer.
      * @return A copy of the buffer.
      */
-    BufferManager copy();
+    CellManager copy();
+    
+    /**
+     * Are all the cells valid.
+     * If a cell count goes negative or exceeds the number of bits allocated for the value the cell is said to be invalid.
+     * A manager with an invalid cell is invalid. Once a manager becomes invalid it will always be invalid until
+     * {@code clear()} is called.
+     * @see #clear()
+     * @return true if this manager is valid.
+     */
+    boolean isValid();
     
 }

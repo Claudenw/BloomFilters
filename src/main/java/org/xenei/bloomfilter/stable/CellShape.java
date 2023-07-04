@@ -1,6 +1,6 @@
 package org.xenei.bloomfilter.stable;
 
-public interface BufferShape {
+public interface CellShape {
     /**
      * Gets the number of entries in the Buffer.
      * This is also known as {@code m}.
@@ -30,7 +30,7 @@ public interface BufferShape {
      * Test that the settings of the shape are reasonable.
      * @param shape
      */
-    public static void verifySettings(BufferShape shape) {
+    public static void verifySettings(CellShape shape) {
         if (shape.resetValue() > 255 || shape.resetValue() < 1) {
             throw new IllegalStateException("reset value must be in the range [1,255]");
         }

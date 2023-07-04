@@ -5,35 +5,44 @@ import java.util.function.IntBinaryOperator;
 
 import org.apache.commons.collections4.bloomfilter.BitMap;
 
-public abstract class AbstractBufferManager implements BufferManager {
-
+public abstract class AbstractCellManager implements CellManager {
     /**
      * The BufferShape of the buffer.
      */
-    protected final BufferShape shape;
+    protected final CellShape shape;
     /**
      * The buffer.
      */
     protected final byte[] buffer;
+    /**
+     * The valid flag.
+     */
+    protected boolean valid;
 
     /**
      * Get a buffer manager based on the shape.
      * @param shape the BufferShape to create.
      * @return a BufferManager instance.
      */
-    public static BufferManager instance(BufferShape shape) {
+    public static CellManager instance(CellShape shape) {
         byte entriesPerByte = (byte) (Byte.SIZE / shape.bitsPerCell());
         return (entriesPerByte == 1) ? new Simple(shape) : new Packed(shape);
     }
 
-    private AbstractBufferManager(BufferShape shape, int buffSize) {
+    private AbstractCellManager(CellShape shape, int buffSize) {
         this.shape = shape;
         this.buffer = new byte[buffSize];
+    }
+    
+    @Override
+    public boolean isValid() {
+        return valid;
     }
 
     @Override
     public void clear() {
         Arrays.fill(buffer, (byte) 0);
+        valid = true;
     }
 
     /**
@@ -59,37 +68,38 @@ public abstract class AbstractBufferManager implements BufferManager {
      * A simple buffer that stores one byte per byte in the buffer.
      *
      */
-    public static class Simple extends AbstractBufferManager {
-
+    public static class Simple extends AbstractCellManager {
         /**
          * Constructor
          * @param shape the shape for the buffe.r
          */
-        Simple(BufferShape shape) {
+        Simple(CellShape shape) {
             super(shape, shape.numberOfCells());
+            
         }
 
         @Override
         public Simple copy() {
             Simple result = new Simple(this.shape);
+            result.valid = valid;
             System.arraycopy(this.buffer, 0, result.buffer, 0, result.buffer.length);
             return result;
         }
 
         @Override
         public int get(int entry) {
-            return BufferShape.asInt(buffer[entry]);
+            return CellShape.asInt(buffer[entry]);
         }
 
         @Override
         public void set(int entry) {
-            buffer[entry] = BufferShape.asByte(shape.resetValue());
+            buffer[entry] = CellShape.asByte(shape.resetValue());
         }
 
         @Override
         public void decrement(int entry) {
             if (buffer[entry] != 0) {
-                buffer[entry] = BufferShape.asByte(BufferShape.asInt(buffer[entry]) - 1);
+                buffer[entry] = CellShape.asByte(CellShape.asInt(buffer[entry]) - 1);
             }
         }
 
@@ -100,7 +110,7 @@ public abstract class AbstractBufferManager implements BufferManager {
 
         @Override
         public void func(int entry, int value, IntBinaryOperator f) {
-            buffer[entry] = BufferShape.asByte(f.applyAsInt(get(entry), value));
+            buffer[entry] = CellShape.asByte(f.applyAsInt(get(entry), value));
         }
     }
 
@@ -108,7 +118,7 @@ public abstract class AbstractBufferManager implements BufferManager {
      * An implementation of BufferManager that packs multiple cells into a single byte of the buffer.
      *
      */
-    public static class Packed extends AbstractBufferManager {
+    public static class Packed extends AbstractCellManager {
         /**
          * position of the Position value in a result array.
          */
@@ -127,7 +137,7 @@ public abstract class AbstractBufferManager implements BufferManager {
          * Creates an empty packed buffer.
          * @param shape the Buffer shape.
          */
-        Packed(BufferShape shape) {
+        Packed(CellShape shape) {
             super(shape, (int) Math.ceil(shape.numberOfCells() * 1.0 / shape.cellsPerByte()));
             this.mask = (byte) ((1 << shape.bitsPerCell()) - 1);
         }
@@ -135,6 +145,7 @@ public abstract class AbstractBufferManager implements BufferManager {
         @Override
         public Packed copy() {
             Packed result = new Packed(this.shape);
+            result.valid = valid;
             System.arraycopy(this.buffer, 0, result.buffer, 0, result.buffer.length);
             return result;
         }
@@ -172,7 +183,7 @@ public abstract class AbstractBufferManager implements BufferManager {
         private void set(int[] location, int rawValue) {
             int value = rawValue << location[OFFSET];
             int reverseMask = ~(mask << location[OFFSET]);
-            buffer[location[POSITION]] = BufferShape.asByte((buffer[location[POSITION]] & reverseMask) | value);
+            buffer[location[POSITION]] = CellShape.asByte((buffer[location[POSITION]] & reverseMask) | value);
         }
 
         @Override
