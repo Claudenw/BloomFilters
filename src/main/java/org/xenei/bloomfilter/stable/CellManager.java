@@ -6,7 +6,7 @@ import java.util.function.IntBinaryOperator;
  * A manager for Bloom filter buffers where the number of bits used for a cell is in the range of [1,8] bits.
  *
  */
-public interface CellManager {
+public interface CellManager extends CellProducer {
 
     /**
      * gets the value of the cell.
@@ -18,14 +18,42 @@ public interface CellManager {
     /**
      * Sets the value of the entry to a default value. 
      * @param entry the cell to set.
+     * @param value the value to set the cell to.
+     * @returns {@code true} if the buffer is still valid.
      */
-    void set(int entry);
+    boolean set(int entry, int value);
 
     /**
-     * Decrement the value of the entry by a default decrement value.
+     * Decrement the value of the entry by a the value.
      * @param entry the cell to decrement.
+     * @param value the value to set the cell to.
+     * @returns {@code true} if the buffer is still valid.
      */
-    void decrement(int entry);
+    boolean decrement(int entry, int value);
+    
+    /**
+     * Decrement the value of the entry by the value or sets to zero if the 
+     * cell value would drop below zero.
+     * @param entry the cell to decrement.
+     * @param value the value to set the cell to.
+     */
+    void safeDecrement(int entry, int value);
+
+    /**
+     * Increment the value of the entry by the value.
+     * @param entry the cell to decrement.
+     * @param value the value to set the cell to.
+     * @returns {@code true} if the buffer is still valid.
+     */
+    boolean increment(int entry, int value);
+
+    /**
+     * Increment the value of the entry by the value or set the value to zero if it exceeds the
+     * max cell value.
+     * @param entry the cell to decrement.
+     * @param value the value to set the cell to.
+     */
+    void safeIncrement(int entry, int value);
 
     /**
      * Tests if the cell is set.  Returns true if the cell is set.
@@ -40,16 +68,8 @@ public interface CellManager {
     void clear();
 
     /**
-     * Applies the function to the value of the cell in the buffer and sets the value.
-     * @param entry The cell to update.
-     * @param value the second value to pass to the function.
-     * @param f A function to operate on the current cell value and the value parameter.
-     */
-    void func(int entry, int value, IntBinaryOperator f);
-
-    /**
-     * Makes a copy of the buffer.
-     * @return A copy of the buffer.
+     * Makes a copy of the CellManager.
+     * @return A copy of the CellManager.
      */
     CellManager copy();
     
@@ -63,4 +83,10 @@ public interface CellManager {
      */
     boolean isValid();
     
+    /**
+     * Get the shape of the cells that this manager is managing.
+     * @return the cell shape.
+     */
+    CellShape getCellShape();
+ 
 }

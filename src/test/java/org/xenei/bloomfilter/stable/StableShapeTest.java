@@ -28,7 +28,7 @@ public class StableShapeTest {
         underTest = StableShape.builder(testShape).setMax(250).build();
         assertEquals(250, underTest.resetValue());
 
-        assertThrows(IllegalArgumentException.class, () -> StableShape.builder(testShape).setMax(300).build());
+        assertThrows(IllegalArgumentException.class, () -> StableShape.builder(testShape).setMax(0xFFFF_FFFF).build());
         assertThrows(IllegalArgumentException.class, () -> StableShape.builder(testShape).setMax(0).build());
     }
 
@@ -43,8 +43,12 @@ public class StableShapeTest {
         assertEquals(4, StableShape.builder(testShape).setMax(8).build().bitsPerCell());
         assertEquals(8, StableShape.builder(testShape).setMax(129).build().bitsPerCell());
         assertEquals(8, StableShape.builder(testShape).setMax(255).build().bitsPerCell());
+        assertEquals(15, StableShape.builder(testShape).setMax(Short.MAX_VALUE).build().bitsPerCell());
+        assertEquals(16, StableShape.builder(testShape).setMax(1+Short.MAX_VALUE).build().bitsPerCell());
+        assertEquals(31, StableShape.builder(testShape).setMax(Integer.MAX_VALUE).build().bitsPerCell());
     }
 
+    /*
     @Test
     public void cellsPerByteTest() {
         assertEquals(4, StableShape.builder(testShape).build().cellsPerByte());
@@ -58,7 +62,7 @@ public class StableShapeTest {
         assertEquals(1, StableShape.builder(testShape).setMax(129).build().cellsPerByte());
         assertEquals(1, StableShape.builder(testShape).setMax(255).build().cellsPerByte());
     }
-
+*/
     @Test
     public void expectedCardinalityTest() {
         assertEquals(9, StableShape.builder(testShape).build().expectedCardinality);

@@ -56,7 +56,7 @@ public class StableShape implements CellShape {
         this.decrementShape = Shape.fromKM(p, m);
         this.fps = fps;
         int bits = Byte.SIZE;
-        for (int i = 1; i < Byte.SIZE; i++) {
+        for (int i = 1; i < Integer.SIZE; i++) {
             if ((max >> i) == 0) {
                 bits = i;
                 break;
@@ -66,8 +66,22 @@ public class StableShape implements CellShape {
 
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
-        CellShape.verifySettings(this);
+        verifySettings();
     }
+    
+    
+  /**
+   * Test that the settings of the shape are reasonable.
+   * @param shape
+   */
+  private void verifySettings() {
+      if (resetValue() > maxValue() || resetValue() < 1) {
+          throw new IllegalStateException("reset value must be in the range [1,255]");
+      }
+      if (Math.pow(2, bitsPerCell()) < resetValue()) {
+          throw new IllegalStateException( String.format( "2^%s > %s", bitsPerCell(), resetValue()));
+      }
+  }
 
     @Override
     public String toString() {
@@ -81,6 +95,7 @@ public class StableShape implements CellShape {
      * Gets the standard Bloom filter Shape for the stable Bloom filter.
      * @return The standard Bloom filter shape.
      */
+    @Override
     public Shape getShape() {
         return shape;
     }
@@ -96,16 +111,10 @@ public class StableShape implements CellShape {
     }
 
     @Override
-    public int numberOfCells() {
-        return shape.getNumberOfBits();
-    }
-
-    @Override
     public byte bitsPerCell() {
         return bitsPerCell;
     }
 
-    @Override
     public int resetValue() {
         return resetValue;
     }
@@ -135,7 +144,7 @@ public class StableShape implements CellShape {
         }
 
         /**
-         * Sets the expected false positive rate.  if not set will be calculated from @{code k}.
+         * Sets the expected false positive rate.  if not set will be calculated from {@code k}.
          * @param fps the expected false positive rate.
          * @return this  for chaining.
          */
@@ -145,7 +154,7 @@ public class StableShape implements CellShape {
         }
 
         /**
-         * Sets the number of hashes for each Bloom filter. if not set will be calculated from @{code fps}.
+         * Sets the number of hashes for each Bloom filter. if not set will be calculated from {@code fps}.
          * @param k the number of hashes for each filter.
          * @return this for chaining.
          */
@@ -205,8 +214,8 @@ public class StableShape implements CellShape {
             if (k <= UNSET && fps <= UNSET) {
                 throw new IllegalArgumentException("Either K or Fps must be greater than 0");
             }
-            if (max <= UNSET || max > 0xFF) {
-                throw new IllegalArgumentException("Max must be in the range [1,255]");
+            if (max <= UNSET) {
+                throw new IllegalArgumentException("Max must be greater than 0");
             }
             if (k <= UNSET) {
                 // log2(1/fps) by log rule

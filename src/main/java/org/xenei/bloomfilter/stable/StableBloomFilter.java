@@ -19,7 +19,7 @@ import org.apache.commons.collections4.bloomfilter.SimpleBloomFilter;
 public class StableBloomFilter implements BloomFilter {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
-    private final CellManager buffer;
+    private final CellManager cellManager;
     private int cardinality;
 
     /**
@@ -27,13 +27,13 @@ public class StableBloomFilter implements BloomFilter {
      * @param shape the Stable shape.
      */
     public StableBloomFilter(StableShape shape) {
-        this(shape, AbstractCellManager.instance(shape));
+        this(shape, new LongArrayCellManager(shape));
     }
 
     private StableBloomFilter(StableShape shape, CellManager buffer) {
         this.shape = shape;
         this.idxFactory = new FastPseudoRandomInt();
-        this.buffer = buffer;
+        this.cellManager = buffer;
         this.cardinality = -1;
     }
 
@@ -57,29 +57,26 @@ public class StableBloomFilter implements BloomFilter {
 
     @Override
     public void clear() {
-        buffer.clear();
+        cellManager.clear();
         cardinality = 0;
     }
 
     @Override
     public boolean contains(IndexProducer indexProducer) {
         return indexProducer.forEachIndex(x -> {
-            return buffer.isSet(x);
+            return cellManager.isSet(x);
         });
     }
 
     @Override
     public int cardinality() {
-        if (cardinality < 0) {
-            int result = 0;
-            for (int i = 0; i < shape.numberOfCells(); i++) {
-                if (buffer.isSet(i)) {
-                    result++;
-                }
-            }
-            cardinality = result;
+        int result = cardinality;
+        if (result < 0) {
+            int[] accumulator = {0};
+            cellManager.forEachCell( c -> { if (c!=0) { accumulator[0]++;} return true;});
+            cardinality = result = accumulator[0];
         }
-        return cardinality;
+        return result;
     }
 
     @Override
@@ -91,7 +88,7 @@ public class StableBloomFilter implements BloomFilter {
                 throw new IllegalArgumentException(
                         String.format("Filter only accepts values in the [0,%d) range", getShape().getNumberOfBits()));
             }
-            buffer.set(x);
+            cellManager.set(x,shape.resetValue());
             return true;
         });
     }
@@ -124,7 +121,7 @@ public class StableBloomFilter implements BloomFilter {
         for (int j = 0; j < blocksm1; j++) {
             value = 0;
             for (int k = 0; k < Long.SIZE; k++) {
-                if (buffer.isSet(i++)) {
+                if (cellManager.isSet(i++)) {
                     value |= BitMap.getLongBit(k);
                 }
             }
@@ -135,7 +132,7 @@ public class StableBloomFilter implements BloomFilter {
         // Final block
         value = 0;
         for (int k = 0; i < shape.numberOfCells(); k++) {
-            if (buffer.isSet(i++)) {
+            if (cellManager.isSet(i++)) {
                 value |= BitMap.getLongBit(k);
             }
         }
@@ -146,7 +143,7 @@ public class StableBloomFilter implements BloomFilter {
     public boolean forEachIndex(final IntPredicate consumer) {
         Objects.requireNonNull(consumer, "consumer");
         for (int i = 0; i < shape.numberOfCells(); i++) {
-            if (buffer.isSet(i) && !consumer.test(i)) {
+            if (cellManager.isSet(i) && !consumer.test(i)) {
                 return false;
             }
         }
@@ -155,7 +152,7 @@ public class StableBloomFilter implements BloomFilter {
 
     @Override
     public StableBloomFilter copy() {
-        return new StableBloomFilter( this.shape, this.buffer.copy() );
+        return new StableBloomFilter( this.shape, this.cellManager.copy() );
     }
     
     /**
@@ -170,10 +167,7 @@ public class StableBloomFilter implements BloomFilter {
 
     private void decrement() {
         cardinality = -1;
-        idxFactory.indices(shape.decrementShape).forEachIndex(x -> {
-            buffer.decrement(x);
-            return true;
-        });
+        idxFactory.indices(shape.decrementShape).forEachIndex(x -> {cellManager.safeDecrement(x, 1);return true;} );
     }
     
     /**

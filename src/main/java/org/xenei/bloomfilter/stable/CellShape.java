@@ -1,13 +1,9 @@
 package org.xenei.bloomfilter.stable;
 
+import org.apache.commons.collections4.bloomfilter.Shape;
+
 public interface CellShape {
-    /**
-     * Gets the number of entries in the Buffer.
-     * This is also known as {@code m}.
-     *
-     * @return the number of entries in the Buffer ({@code m}).
-     */
-    int numberOfCells();
+
     
     /**
      * The number of bits per cell.
@@ -16,27 +12,23 @@ public interface CellShape {
     
     /**
      * The number of cells in a single byte.
+     * @param blockSize the size of a block of cells in bits.
      */
-    default byte cellsPerByte() {
-        return (byte) (Byte.SIZE / bitsPerCell());
+    default int cellsPerBlock(int blockSize) {
+        return (blockSize / bitsPerCell());
     }
-    /**
-     * The unsigned byte value to set the cell when it is enabled. By default resetValue = (2^bitsPerCell)-1.
-     * Must be in the range [0,255].
-     */
-    int resetValue();
-    
-    /**
-     * Test that the settings of the shape are reasonable.
-     * @param shape
-     */
-    public static void verifySettings(CellShape shape) {
-        if (shape.resetValue() > 255 || shape.resetValue() < 1) {
-            throw new IllegalStateException("reset value must be in the range [1,255]");
-        }
-        if (Math.pow(2, shape.bitsPerCell()) < shape.resetValue()) {
-            throw new IllegalStateException( String.format( "2^%s > %s", shape.bitsPerCell(), shape.resetValue()));
-        }
+
+    default int blocksRequired(int blockSize) {
+        // cells / cells/block = blocks
+        return (int) Math.ceil( numberOfCells() * 1.0 / cellsPerBlock(blockSize));
+    }
+
+    default int maxValue() {
+        return (1 << bitsPerCell())-1;
+    }
+
+    default int numberOfCells() {
+        return getShape().getNumberOfBits();
     }
     
     /**
@@ -57,4 +49,6 @@ public interface CellShape {
     public static int asInt(byte value) {
         return 0xFF & value;
     }
+    
+    public Shape getShape();
 }
