@@ -3,6 +3,7 @@ package org.xenei.bloomfilter.stable;
 import java.util.Arrays;
 import java.util.function.IntPredicate;
 
+import org.apache.commons.collections4.bloomfilter.BitCountProducer.BitCountConsumer;
 import org.apache.commons.collections4.bloomfilter.BitMap;
 
 public class LongArrayCellManager implements CellManager {
@@ -24,7 +25,7 @@ public class LongArrayCellManager implements CellManager {
      * The valid flag.
      */
     protected boolean invalid;
-    
+
     protected int cardinality;
 
     public LongArrayCellManager(CellShape shape) {
@@ -40,15 +41,19 @@ public class LongArrayCellManager implements CellManager {
     }
 
     protected int getBlock(int idx) {
+        if (idx < 0 || idx > shape.getShape().getNumberOfBits()) {
+            throw new IndexOutOfBoundsException(idx);
+        }
         return idx / cellsPerBlock;
     }
 
     protected long getMask(int idx) {
-        return this.shape.cellMask() << (BitMap.mod(idx, cellsPerBlock)*shape.getBitsPerCell());
+        return this.shape.cellMask() << (BitMap.mod(idx, cellsPerBlock) * shape.getBitsPerCell());
     }
-    
+
     protected long getMask(int idx, int value) {
-        return value==0?0:(this.shape.cellMask() & value) << (BitMap.mod(idx, cellsPerBlock)*shape.getBitsPerCell());
+        return value == 0 ? 0
+                : (this.shape.cellMask() & value) << (BitMap.mod(idx, cellsPerBlock) * shape.getBitsPerCell());
     }
 
     @Override
@@ -74,23 +79,24 @@ public class LongArrayCellManager implements CellManager {
 
     private boolean setLong(int idx, long value) {
         invalid |= !valueInRange(value);
-        long offmask = getMask(idx);
-        int block = getBlock(idx);
-        long current = buffer[block] & offmask;
-        if (current != 0 && value == 0) {
-            cardinality--;
+        if (!invalid) {
+            long offmask = getMask(idx);
+            int block = getBlock(idx);
+            long current = buffer[block] & offmask;
+            if (current != 0 && value == 0) {
+                cardinality--;
+            }
+            if (current == 0 && value != 0) {
+                cardinality++;
+            }
+            buffer[block] = (buffer[block] & ~offmask) | getMask(idx, (int) value);
         }
-        if (current == 0 && value != 0) {
-            cardinality++;
-        }
-        buffer[block] = (buffer[block] & ~offmask) | getMask(idx, (int) value);
         return isValid();
     }
 
     @Override
     public boolean increment(int idx, int value) {
-        setLong(idx, getLong(idx) + value);
-        return isValid();
+        return setLong(idx, getLong(idx) + value);
     }
 
     private boolean valueInRange(long value) {
@@ -151,7 +157,18 @@ public class LongArrayCellManager implements CellManager {
         }
         return true;
     }
-    
+
+    @Override
+    public boolean forEachCell(BitCountConsumer consumer) {
+        for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
+            int val = get(idx);
+            if (val != 0 && !consumer.test(idx, get(idx))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public int cardinality() {
         return cardinality;

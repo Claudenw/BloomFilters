@@ -17,14 +17,15 @@ public class StableShape extends CellShape {
      */
     public final double fps;
     /**
-     * The stable point is defined as the limit of the
-     * expected fraction of 0s in an SBF when the number of iterations goes to
-     * infinity. When this limit is reached, we call SBF stable.
+     * The stable point is defined as the limit of the expected fraction of 0s in an
+     * SBF when the number of iterations goes to infinity. When this limit is
+     * reached, we call SBF stable.
      */
     public final double stablePoint;
 
     /**
      * Constructs an empty builder.
+     * 
      * @return an empty builder
      */
     public static Builder builder() {
@@ -33,6 +34,7 @@ public class StableShape extends CellShape {
 
     /**
      * Constructs an builder with {@code k} and {@code m} based on the shape.
+     * 
      * @param shape to base the stable shape on.
      * @return
      */
@@ -42,7 +44,7 @@ public class StableShape extends CellShape {
 
     private StableShape(double fps, int m, int k, int p, int max) {
         super(Shape.fromPMK(fps, m, k), max, calcCellShape(max));
-        this.decrementShape = p==0 ? null : Shape.fromKM(p, m);
+        this.decrementShape = p == 0 ? null : Shape.fromKM(p, m);
         this.fps = fps;
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
@@ -53,21 +55,20 @@ public class StableShape extends CellShape {
         return String.format(
                 "StableShape[k=%s m=%s fps=%s stable point=%s expected cardinality=%s decrement count=%s reset value=%s]",
                 getNumberOfHashFunctions(), numberOfCells(), fps, stablePoint, expectedCardinality,
-                decrementShape==null?0:decrementShape.getNumberOfHashFunctions(), resetValue());
+                decrementShape == null ? 0 : decrementShape.getNumberOfHashFunctions(), resetValue());
     }
 
-
     /**
-     * Gets the number of hash functions used to construct the filter.
-     * This is also known as {@code k}.
+     * Gets the number of hash functions used to construct the filter. This is also
+     * known as {@code k}.
      *
-     * @return the number of hash functions used to construct the filter ({@code k}).
+     * @return the number of hash functions used to construct the filter
+     * ({@code k}).
      */
     int getNumberOfHashFunctions() {
         return getShape().getNumberOfHashFunctions();
     }
 
-    
     public int resetValue() {
         return maxValue();
     }
@@ -97,9 +98,11 @@ public class StableShape extends CellShape {
         }
 
         /**
-         * Sets the expected false positive rate.  if not set will be calculated from {@code k}.
+         * Sets the expected false positive rate. if not set will be calculated from
+         * {@code k}.
+         * 
          * @param fps the expected false positive rate.
-         * @return this  for chaining.
+         * @return this for chaining.
          */
         public Builder setFps(double fps) {
             this.fps = fps;
@@ -107,7 +110,9 @@ public class StableShape extends CellShape {
         }
 
         /**
-         * Sets the number of hashes for each Bloom filter. if not set will be calculated from {@code fps}.
+         * Sets the number of hashes for each Bloom filter. if not set will be
+         * calculated from {@code fps}.
+         * 
          * @param k the number of hashes for each filter.
          * @return this for chaining.
          */
@@ -117,7 +122,8 @@ public class StableShape extends CellShape {
         }
 
         /**
-         * Sets the number of bits for each Bloom filter.  Must be greater than 1.
+         * Sets the number of bits for each Bloom filter. Must be greater than 1.
+         * 
          * @param m the number of bits for each Bloom filter.
          * @return this for chaining.
          */
@@ -128,7 +134,10 @@ public class StableShape extends CellShape {
 
         /**
          * Sets the number of cells to decrement on each insertion.
-         * <p>If set to zero no decrements will be made.  Must be between [0, {@code numberOfBits}]
+         * <p>
+         * If set to zero no decrements will be made. Must be between [0,
+         * {@code numberOfBits}]
+         * 
          * @param p the number of cells to decrement on each insertion.
          * @return this for chaining.
          */
@@ -138,7 +147,8 @@ public class StableShape extends CellShape {
         }
 
         /**
-         * Sets the value to set in each cell on insertion.  Must be in the range [1,255]
+         * Sets the value to set in each cell on insertion. Must be in the range [1,255]
+         * 
          * @param max the value to set eaach cell on insertion.
          * @return this for chaining.
          */
@@ -148,9 +158,11 @@ public class StableShape extends CellShape {
         }
 
         /**
-         * Sets the number of bits to be used for each insertion.  Setting this value will
-         * reset max to be the maximum value that will fit in the specified number of bits.
-         * @param d the number of bits to use.  Must be in the range [1,8].
+         * Sets the number of bits to be used for each insertion. Setting this value
+         * will reset max to be the maximum value that will fit in the specified number
+         * of bits.
+         * 
+         * @param d the number of bits to use. Must be in the range [1,8].
          * @return this for chaining.
          */
         public Builder setD(int d) {
@@ -192,6 +204,7 @@ public class StableShape extends CellShape {
 
         /**
          * Builds the StableShape.
+         * 
          * @return a new StableShape.
          */
         public StableShape build() {

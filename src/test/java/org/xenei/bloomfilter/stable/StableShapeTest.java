@@ -44,7 +44,7 @@ public class StableShapeTest {
         assertEquals(8, StableShape.builder(testShape).setMax(129).build().getBitsPerCell());
         assertEquals(8, StableShape.builder(testShape).setMax(255).build().getBitsPerCell());
         assertEquals(15, StableShape.builder(testShape).setMax(Short.MAX_VALUE).build().getBitsPerCell());
-        assertEquals(16, StableShape.builder(testShape).setMax(1+Short.MAX_VALUE).build().getBitsPerCell());
+        assertEquals(16, StableShape.builder(testShape).setMax(1 + Short.MAX_VALUE).build().getBitsPerCell());
         assertEquals(31, StableShape.builder(testShape).setMax(Integer.MAX_VALUE).build().getBitsPerCell());
     }
 
@@ -62,7 +62,7 @@ public class StableShapeTest {
         assertEquals(1, StableShape.builder(testShape).setMax(129).build().cellsPerByte());
         assertEquals(1, StableShape.builder(testShape).setMax(255).build().cellsPerByte());
     }
-*/
+    */
     @Test
     public void expectedCardinalityTest() {
         assertEquals(9, StableShape.builder(testShape).build().expectedCardinality);

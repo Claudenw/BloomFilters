@@ -11,7 +11,8 @@ import org.apache.commons.collections4.bloomfilter.Shape;
 
 /**
  * Generate sudo random integers using combinatorial hashing as described by
- * <a href="https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf">Krisch and
+ * <a href=
+ * "https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf">Krisch and
  * Mitzenmacher</a> using the enhanced double hashing technique described in the
  * wikipedia article <a href=
  * "https://en.wikipedia.org/wiki/Double_hashing#Enhanced_double_hashing">Double

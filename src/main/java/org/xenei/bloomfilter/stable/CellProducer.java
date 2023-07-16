@@ -17,15 +17,16 @@
 package org.xenei.bloomfilter.stable;
 
 import java.util.BitSet;
-import java.util.Objects;
 import java.util.function.IntPredicate;
-import java.util.function.LongPredicate;
+
+import org.apache.commons.collections4.bloomfilter.BitCountProducer.BitCountConsumer;
 
 /**
  * An object that produces indices of a Bloom filter.
- * <p><em>
- * The default implementation of {@code asIndexArray} is slow. Implementers should reimplement the
- * method where possible.</em></p>
+ * <p>
+ * <em> The default implementation of {@code asIndexArray} is slow. Implementers
+ * should reimplement the method where possible.</em>
+ * </p>
  *
  * @since 4.5
  */
@@ -33,22 +34,40 @@ import java.util.function.LongPredicate;
 public interface CellProducer {
 
     /**
-     * Each index is passed to the predicate. The predicate is applied to each
-     * index value, if the predicate returns {@code false} the execution is stopped, {@code false}
-     * is returned, and no further indices are processed.
+     * Each index with a value greater than zero is passed to the predicate. The
+     * predicate is applied to each index value, if the predicate returns
+     * {@code false} the execution is stopped, {@code false} is returned, and no
+     * further indices are processed.
      *
-     * <p>Any exceptions thrown by the action are relayed to the caller.</p>
+     * <p>
+     * Any exceptions thrown by the action are relayed to the caller.
+     * </p>
      *
-     * <p>Indices ordering and uniqueness is not guaranteed.</p>
+     * <p>
+     * Indices ordering and uniqueness is not guaranteed.
+     * </p>
      *
      * @param predicate the action to be performed for each non-zero bit index.
-     * @return {@code true} if all indexes return true from consumer, {@code false} otherwise.
-     * @throws NullPointerException if the specified action is null
+     * @return {@code true} if all cells return true from consumer, {@code false}
+     * otherwise.
+     * @throws NullPointerException if the specified predicate is null
      */
-    boolean forEachCell(IntPredicate predicate);
+    default boolean forEachCell(IntPredicate predicate) {
+        return forEachCell((idx, val) -> (val == 0) ? true : predicate.test(idx));
+    }
+
+    /**
+     * For each cell in the producer call the consumer with the index and the value.
+     * 
+     * @param consumer the consumer for the index and value.
+     * @return {@code true} if all cells return true from consumer, {@code false}
+     * otherwise.
+     */
+    boolean forEachCell(BitCountConsumer consumer);
 
     /**
      * Creates an IndexProducer from an array of integers.
+     * 
      * @param values the index values
      * @return an IndexProducer that uses the values.
      */
@@ -56,9 +75,9 @@ public interface CellProducer {
         return new CellProducer() {
 
             @Override
-            public boolean forEachCell(final IntPredicate predicate) {
-                for (final int value : values) {
-                    if (!predicate.test(value)) {
+            public boolean forEachCell(final BitCountConsumer consumer) {
+                for (int idx = 0; idx < values.length; idx++) {
+                    if (!consumer.test(idx, values[idx])) {
                         return false;
                     }
                 }
@@ -72,20 +91,23 @@ public interface CellProducer {
         };
     }
 
-
     /**
      * Return a copy of the IndexProducer data as an int array.
      *
-     * <p>Indices ordering and uniqueness is not guaranteed.</p>
+     * <p>
+     * Indices ordering and uniqueness is not guaranteed.
+     * </p>
      *
-     * <p><em>
-     * The default implementation of this method is slow. It is recommended
-     * that implementing classes reimplement this method.
-     * </em></p>
+     * <p>
+     * <em> The default implementation of this method is slow. It is recommended
+     * that implementing classes reimplement this method. </em>
+     * </p>
      *
-     * <p><em>
-     * The default implementation of this method returns unique values in order.
-     * </em></p>
+     * <p>
+     * <em> The default implementation of this method returns unique values in
+     * order. </em>
+     * </p>
+     * 
      * @return An int array of the data.
      */
     default int[] asIndexArray() {

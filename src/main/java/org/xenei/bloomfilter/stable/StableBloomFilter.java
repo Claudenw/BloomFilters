@@ -20,10 +20,11 @@ public class StableBloomFilter implements BloomFilter {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
     private final CellManager cellManager;
-    //private int cardinality;
+    // private int cardinality;
 
     /**
      * Create a stable Bloom filter.
+     * 
      * @param shape the Stable shape.
      */
     public StableBloomFilter(StableShape shape) {
@@ -34,11 +35,12 @@ public class StableBloomFilter implements BloomFilter {
         this.shape = shape;
         this.idxFactory = new FastPseudoRandomInt();
         this.cellManager = buffer;
-        //this.cardinality = -1;
+        // this.cardinality = -1;
     }
 
     /**
      * Gets the stableShape for this Bloom filter.
+     * 
      * @return the Stable shape.
      */
     public StableShape getStableShape() {
@@ -58,7 +60,7 @@ public class StableBloomFilter implements BloomFilter {
     @Override
     public void clear() {
         cellManager.clear();
- //       cardinality = 0;
+        // cardinality = 0;
     }
 
     @Override
@@ -89,7 +91,7 @@ public class StableBloomFilter implements BloomFilter {
                 throw new IllegalArgumentException(
                         String.format("Filter only accepts values in the [0,%d) range", getShape().getNumberOfBits()));
             }
-            cellManager.set(x,shape.resetValue());
+            cellManager.set(x, shape.resetValue());
             return true;
         });
     }
@@ -153,11 +155,12 @@ public class StableBloomFilter implements BloomFilter {
 
     @Override
     public StableBloomFilter copy() {
-        return new StableBloomFilter( this.shape, this.cellManager.copy() );
+        return new StableBloomFilter(this.shape, this.cellManager.copy());
     }
-    
+
     /**
      * Flatten the stable filter to a SimpleBloomFilter.
+     * 
      * @return a SimpleBloomFilter with equivalent bits enabled.
      */
     public BloomFilter flatten() {
@@ -167,28 +170,42 @@ public class StableBloomFilter implements BloomFilter {
     }
 
     private void decrement() {
-        if (shape.decrementShape != null ) {
+        if (shape.decrementShape != null) {
 //            cardinality = -1;
-            idxFactory.indices(shape.decrementShape).forEachIndex(x -> {cellManager.safeDecrement(x, 1);return true;} );
+            idxFactory.indices(shape.decrementShape).forEachIndex(x -> {
+                cellManager.safeDecrement(x, 1);
+                return true;
+            });
         }
     }
-    
+
     /**
-     * Estimates the number of items in the intersection of this Bloom filter with the other bloom filter.
+     * Estimates the number of items in the intersection of this Bloom filter with
+     * the other bloom filter.
      *
-     * <p>This method produces estimate is roughly equivalent to the number of unique Hashers that have been merged into both
-     * of the filters by rounding the value from the calculation described in the {@link Shape} class javadoc.</p>
+     * <p>
+     * This method produces estimate is roughly equivalent to the number of unique
+     * Hashers that have been merged into both of the filters by rounding the value
+     * from the calculation described in the {@link Shape} class javadoc.
+     * </p>
      *
-     * <p><em>{@code estimateIntersection} should only be called with Bloom filters of the same Shape.  If called on Bloom
-     * filters of differing shape this method is not symmetric. If {@code other} has more bits an {@code IllegalArgumentException}
-     * may be thrown.</em></p>
+     * <p>
+     * <em>{@code estimateIntersection} should only be called with Bloom filters of
+     * the same Shape. If called on Bloom filters of differing shape this method is
+     * not symmetric. If {@code other} has more bits an
+     * {@code IllegalArgumentException} may be thrown.</em>
+     * </p>
      *
      * @param other The other Bloom filter
-     * @return an estimate of the number of items in the intersection. If the calculated estimate is larger than Integer.MAX_VALUE then MAX_VALUE is returned.
-     * @throws IllegalArgumentException if the estimated N for the union of the filters is infinite.
+     * @return an estimate of the number of items in the intersection. If the
+     * calculated estimate is larger than Integer.MAX_VALUE then MAX_VALUE is
+     * returned.
+     * @throws IllegalArgumentException if the estimated N for the union of the
+     * filters is infinite.
      * @see #estimateN()
      * @see Shape
      */
+    @Override
     public int estimateIntersection(final BloomFilter other) {
         Objects.requireNonNull(other, "other");
         double eThis = getShape().estimateN(cardinality());
@@ -216,6 +233,6 @@ public class StableBloomFilter implements BloomFilter {
             estimate = Math.round(eThis + eOther - eUnion);
             estimate = estimate < 0 ? 0 : estimate;
         }
-        return estimate>Integer.MAX_VALUE?Integer.MAX_VALUE:(int) estimate;
+        return estimate > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) estimate;
     }
 }
