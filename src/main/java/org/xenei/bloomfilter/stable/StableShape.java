@@ -2,14 +2,8 @@ package org.xenei.bloomfilter.stable;
 
 import org.apache.commons.collections4.bloomfilter.Shape;
 
-public class StableShape implements CellShape {
+public class StableShape extends CellShape {
 
-    private Shape shape;
-    /**
-     * The value to set the cell when it is enabled. In the paper this is called
-     * "Max". resetValue = (2^bitsPerCell)-1
-     */
-    private final int resetValue;
     /**
      * The shape used when decrementing the filter.
      */
@@ -28,10 +22,6 @@ public class StableShape implements CellShape {
      * infinity. When this limit is reached, we call SBF stable.
      */
     public final double stablePoint;
-    /**
-     * The number of bits per cell/entry.
-     */
-    private final byte bitsPerCell;
 
     /**
      * Constructs an empty builder.
@@ -51,54 +41,21 @@ public class StableShape implements CellShape {
     }
 
     private StableShape(double fps, int m, int k, int p, int max) {
-        this.shape = Shape.fromPMK(fps, m, k);
-        this.resetValue = max;
+        super(Shape.fromPMK(fps, m, k), max, calcCellShape(max));
         this.decrementShape = Shape.fromKM(p, m);
         this.fps = fps;
-        int bits = Byte.SIZE;
-        for (int i = 1; i < Integer.SIZE; i++) {
-            if ((max >> i) == 0) {
-                bits = i;
-                break;
-            }
-        }
-        this.bitsPerCell = (byte) bits;
-
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
-        verifySettings();
     }
-    
-    
-  /**
-   * Test that the settings of the shape are reasonable.
-   * @param shape
-   */
-  private void verifySettings() {
-      if (resetValue() > maxValue() || resetValue() < 1) {
-          throw new IllegalStateException("reset value must be in the range [1,255]");
-      }
-      if (Math.pow(2, bitsPerCell()) < resetValue()) {
-          throw new IllegalStateException( String.format( "2^%s > %s", bitsPerCell(), resetValue()));
-      }
-  }
 
     @Override
     public String toString() {
         return String.format(
                 "StableShape[k=%s m=%s fps=%s stable point=%s expected cardinality=%s decrement count=%s reset value=%s]",
                 getNumberOfHashFunctions(), numberOfCells(), fps, stablePoint, expectedCardinality,
-                decrementShape.getNumberOfHashFunctions(), resetValue);
+                decrementShape.getNumberOfHashFunctions(), resetValue());
     }
 
-    /**
-     * Gets the standard Bloom filter Shape for the stable Bloom filter.
-     * @return The standard Bloom filter shape.
-     */
-    @Override
-    public Shape getShape() {
-        return shape;
-    }
 
     /**
      * Gets the number of hash functions used to construct the filter.
@@ -107,16 +64,12 @@ public class StableShape implements CellShape {
      * @return the number of hash functions used to construct the filter ({@code k}).
      */
     int getNumberOfHashFunctions() {
-        return shape.getNumberOfHashFunctions();
+        return getShape().getNumberOfHashFunctions();
     }
 
-    @Override
-    public byte bitsPerCell() {
-        return bitsPerCell;
-    }
-
+    
     public int resetValue() {
-        return resetValue;
+        return maxValue();
     }
 
     /**

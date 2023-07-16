@@ -40,8 +40,12 @@ public class LongArrayCellManager implements CellManager {
         return idx / cellsPerBlock;
     }
 
+    protected long getMask(int idx) {
+        return this.shape.cellMask() << (BitMap.mod(idx, cellsPerBlock)*shape.getBitsPerCell());
+    }
+    
     protected long getMask(int idx, int value) {
-        return ((long) (this.shape.maxValue() & value)) << BitMap.mod(idx, cellsPerBlock);
+        return value==0?0:(this.shape.cellMask() & value) << (BitMap.mod(idx, cellsPerBlock)*shape.getBitsPerCell());
     }
 
     @Override
@@ -50,8 +54,9 @@ public class LongArrayCellManager implements CellManager {
     }
 
     private long getLong(int idx) {
-        long v = buffer[getBlock(idx)] & getMask(idx, this.shape.maxValue());
-        return v >> BitMap.mod(idx, cellsPerBlock) & 0xFFFFFFFF;
+        long v = buffer[getBlock(idx)] & getMask(idx);
+        int shift = BitMap.mod(idx, cellsPerBlock) * shape.getBitsPerCell();
+        return v >> shift & 0xffff_ffff;
     }
 
     @Override
@@ -61,12 +66,12 @@ public class LongArrayCellManager implements CellManager {
 
     @Override
     public boolean isSet(int idx) {
-        return (buffer[getBlock(idx)] & getMask(idx, this.shape.maxValue())) != 0;
+        return (buffer[getBlock(idx)] & getMask(idx)) != 0;
     }
 
     private boolean setLong(int idx, long value) {
         invalid |= !valueInRange(value);
-        long offmask = ~getMask(idx, this.shape.maxValue());
+        long offmask = ~getMask(idx);
         int block = getBlock(idx);
         buffer[block] = (buffer[block] & offmask) | getMask(idx, (int) value);
         return isValid();
@@ -85,7 +90,7 @@ public class LongArrayCellManager implements CellManager {
     @Override
     public void safeIncrement(int idx, int value) {
         long val = getLong(idx);
-        if (val != shape.maxValue()) {
+        if (val != shape.cellMask()) {
             val += value;
             setLong(idx, valueInRange(val) ? 0 : val);
         }
@@ -93,8 +98,7 @@ public class LongArrayCellManager implements CellManager {
 
     @Override
     public boolean decrement(int idx, int value) {
-        setLong(idx, getLong(idx) - value);
-        return isValid();
+        return setLong(idx, getLong(idx) - value);
     }
 
     @Override

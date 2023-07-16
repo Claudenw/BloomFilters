@@ -2,53 +2,97 @@ package org.xenei.bloomfilter.stable;
 
 import org.apache.commons.collections4.bloomfilter.Shape;
 
-public interface CellShape {
-
+public class CellShape {
     
-    /**
-     * The number of bits per cell.
-     */
-    byte bitsPerCell();
+    private final int bitsPerCell;
+    private final int maxValue;
+    private final Shape shape;
+
+    protected static void validateMaxValue(int maxValue) {
+        if (maxValue<1) {
+            throw new IllegalArgumentException("maxValue must be greater than 0");
+        }
+    }
+    
+    protected static int calcCellShape(int maxValue) {
+        long limit = 1;
+        for (int i=1;i<Integer.SIZE;i++) {
+            limit = limit << 1;
+            if (limit > maxValue) {
+                return i;
+            }
+        }
+        throw new IllegalStateException("should not get here");
+    }
+    
+    public static CellShape fromMaxValue(Shape shape, int maxValue) {
+        validateMaxValue(maxValue);
+        return new CellShape(shape, maxValue, calcCellShape(maxValue));
+    }
+    
+    private static void validateBitsPerCell(int bitsPerCell) {
+        if (bitsPerCell >= Integer.SIZE) {
+            throw new  IllegalArgumentException("bitsPerCell must be less than "+Integer.SIZE);
+        }
+        if (bitsPerCell < 1) {
+            throw new IllegalArgumentException("bitsPerCell must be greater than 0");
+        }        
+    }
+    public static CellShape fromBitsPerCell(Shape shape, int bitsPerCell) {
+        validateBitsPerCell(bitsPerCell);
+        return new CellShape(shape, (1<<bitsPerCell)-1, bitsPerCell);
+    }
+    
+    protected CellShape(Shape shape, int maxValue, int bitsPerCell) {
+        validateMaxValue(maxValue);
+        validateBitsPerCell(bitsPerCell);
+        if (maxValue >= 1L<<bitsPerCell) {
+            throw new IllegalStateException(String.format("reset value must be in the range [1,%s)", 1L<<bitsPerCell));
+        }
+        this.shape = shape;
+        this.maxValue = maxValue;
+        this.bitsPerCell = bitsPerCell;
+    }
     
     /**
      * The number of cells in a single byte.
      * @param blockSize the size of a block of cells in bits.
      */
-    default int cellsPerBlock(int blockSize) {
-        return (blockSize / bitsPerCell());
+    public int cellsPerBlock(int blockSize) {
+        return (blockSize / bitsPerCell);
     }
 
-    default int blocksRequired(int blockSize) {
+    final public int blocksRequired(int blockSize) {
         // cells / cells/block = blocks
         return (int) Math.ceil( numberOfCells() * 1.0 / cellsPerBlock(blockSize));
     }
 
-    default int maxValue() {
-        return (1 << bitsPerCell())-1;
+    /**
+     * Create the bit mask for a cell.  This is the mask to find all the bits in a cell.  
+     * This value is not shifter to a cell position so it effectively is the mask for cell zero.
+     * @return the bit mask for a cell.
+     */
+    final public long cellMask() {
+        return (1L << bitsPerCell)-1;
     }
 
-    default int numberOfCells() {
+    final public int numberOfCells() {
         return getShape().getNumberOfBits();
     }
     
-    /**
-     * Convert an int to an unsigned byte.
-     * Values greater than 0xFF are truncated by value & 0xFF.
-     * @param value the value to convert.
-     * @return the byte version of the value.
-     */
-    public static byte asByte(int value) {
-        return (byte) (0xFF & value);
+    final public int getBitsPerCell() {
+        return bitsPerCell;
     }
     
     /**
-     * Convert an unsigned byte to an int value.
-     * @param value the value to truncate.
-     * @return the unsigned byte value.
+     * The maximum value for a cell.
+     * @return The maximum value allowed for a cell.
      */
-    public static int asInt(byte value) {
-        return 0xFF & value;
-    }
+    final public int maxValue() {
+        return maxValue;
+    };
     
-    public Shape getShape();
+    final public Shape getShape() {
+        return shape;
+    }
 }

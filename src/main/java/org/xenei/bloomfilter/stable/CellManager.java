@@ -3,8 +3,16 @@ package org.xenei.bloomfilter.stable;
 import java.util.function.IntBinaryOperator;
 
 /**
- * A manager for Bloom filter buffers where the number of bits used for a cell is in the range of [1,8] bits.
- *
+ * Some Bloom filters use counters rather than bits. In this case each counter is called a {@code cell}.
+ * This interface defiens the methods on cell managers.
+ * <p>
+ * Some definitions:</p>
+ * <ul>
+ * <li>{@code cell} - A collection of bits that are interpreted as a counter.</li>
+ * <li>{@code block} - A collection of cells that are handled as a single entity, usually along native number sizes.
+ * (e.g. 8 (byte), 16 (short), 32 (int), 64 (long))</li>
+ * </ul>
+ * @since 4.5
  */
 public interface CellManager extends CellProducer {
 
