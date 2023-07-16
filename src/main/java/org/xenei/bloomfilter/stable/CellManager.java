@@ -96,5 +96,11 @@ public interface CellManager extends CellProducer {
      * @return the cell shape.
      */
     CellShape getCellShape();
+    
+    /**
+     * Gets the cardinality of the cells.
+     * @return the cardinality of the cells.
+     */
+    int cardinality();
  
 }

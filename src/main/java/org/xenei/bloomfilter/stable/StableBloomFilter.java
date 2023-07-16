@@ -20,7 +20,7 @@ public class StableBloomFilter implements BloomFilter {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
     private final CellManager cellManager;
-    private int cardinality;
+    //private int cardinality;
 
     /**
      * Create a stable Bloom filter.
@@ -34,7 +34,7 @@ public class StableBloomFilter implements BloomFilter {
         this.shape = shape;
         this.idxFactory = new FastPseudoRandomInt();
         this.cellManager = buffer;
-        this.cardinality = -1;
+        //this.cardinality = -1;
     }
 
     /**
@@ -58,7 +58,7 @@ public class StableBloomFilter implements BloomFilter {
     @Override
     public void clear() {
         cellManager.clear();
-        cardinality = 0;
+ //       cardinality = 0;
     }
 
     @Override
@@ -70,13 +70,14 @@ public class StableBloomFilter implements BloomFilter {
 
     @Override
     public int cardinality() {
-        int result = cardinality;
-        if (result < 0) {
-            int[] accumulator = {0};
-            cellManager.forEachCell( c -> { if (c!=0) { accumulator[0]++;} return true;});
-            cardinality = result = accumulator[0];
-        }
-        return result;
+//        int result = cardinality;
+//        if (result < 0) {
+//            int[] accumulator = {0};
+//            cellManager.forEachCell( c -> { if (c!=0) { accumulator[0]++;} return true;});
+//            cardinality = result = accumulator[0];
+//        }
+//        return result;
+        return cellManager.cardinality();
     }
 
     @Override
@@ -166,8 +167,10 @@ public class StableBloomFilter implements BloomFilter {
     }
 
     private void decrement() {
-        cardinality = -1;
-        idxFactory.indices(shape.decrementShape).forEachIndex(x -> {cellManager.safeDecrement(x, 1);return true;} );
+        if (shape.decrementShape != null ) {
+//            cardinality = -1;
+            idxFactory.indices(shape.decrementShape).forEachIndex(x -> {cellManager.safeDecrement(x, 1);return true;} );
+        }
     }
     
     /**

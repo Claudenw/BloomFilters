@@ -42,12 +42,12 @@ public class StableBloomFilterTest extends AbstractBloomFilterTest<StableBloomFi
      * </ul>
      * @return the testing shape.
      */
-    protected final Shape getTestShape() {
-        return Shape.fromNP(17, 1.0/100);
-    }
+//    protected final Shape getTestShape() {
+//        return Shape.fromNP(17, 0.01);
+//    }
 
     protected StableBloomFilter createEmptyFilter(final Shape shape) {
-        StableShape stableShape = StableShape.builder(shape).build();
+        StableShape stableShape = StableShape.builder(shape).setP(0).build();
         return new StableBloomFilter(stableShape);
     }
 }

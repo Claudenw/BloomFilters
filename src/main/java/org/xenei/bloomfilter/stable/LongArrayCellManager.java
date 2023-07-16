@@ -24,14 +24,17 @@ public class LongArrayCellManager implements CellManager {
      * The valid flag.
      */
     protected boolean invalid;
+    
+    protected int cardinality;
 
     public LongArrayCellManager(CellShape shape) {
-        this(shape, new long[shape.blocksRequired(Long.SIZE)], false);
+        this(shape, new long[shape.blocksRequired(Long.SIZE)], false, 0);
     }
 
-    private LongArrayCellManager(CellShape shape, long[] buffer, boolean invalid) {
+    private LongArrayCellManager(CellShape shape, long[] buffer, boolean invalid, int cardinality) {
         this.shape = shape;
         this.invalid = invalid;
+        this.cardinality = cardinality;
         this.cellsPerBlock = shape.cellsPerBlock(Long.SIZE);
         this.buffer = buffer;
     }
@@ -71,9 +74,16 @@ public class LongArrayCellManager implements CellManager {
 
     private boolean setLong(int idx, long value) {
         invalid |= !valueInRange(value);
-        long offmask = ~getMask(idx);
+        long offmask = getMask(idx);
         int block = getBlock(idx);
-        buffer[block] = (buffer[block] & offmask) | getMask(idx, (int) value);
+        long current = buffer[block] & offmask;
+        if (current != 0 && value == 0) {
+            cardinality--;
+        }
+        if (current == 0 && value != 0) {
+            cardinality++;
+        }
+        buffer[block] = (buffer[block] & ~offmask) | getMask(idx, (int) value);
         return isValid();
     }
 
@@ -119,6 +129,7 @@ public class LongArrayCellManager implements CellManager {
     public void clear() {
         Arrays.fill(buffer, 0);
         invalid = false;
+        cardinality = 0;
     }
 
     @Override
@@ -128,7 +139,7 @@ public class LongArrayCellManager implements CellManager {
 
     @Override
     public LongArrayCellManager copy() {
-        return new LongArrayCellManager(this.shape, Arrays.copyOf(buffer, buffer.length), invalid);
+        return new LongArrayCellManager(this.shape, Arrays.copyOf(buffer, buffer.length), invalid, cardinality);
     }
 
     @Override
@@ -139,5 +150,10 @@ public class LongArrayCellManager implements CellManager {
             }
         }
         return true;
+    }
+    
+    @Override
+    public int cardinality() {
+        return cardinality;
     }
 }

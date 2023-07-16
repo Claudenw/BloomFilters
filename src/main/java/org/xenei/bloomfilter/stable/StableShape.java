@@ -42,7 +42,7 @@ public class StableShape extends CellShape {
 
     private StableShape(double fps, int m, int k, int p, int max) {
         super(Shape.fromPMK(fps, m, k), max, calcCellShape(max));
-        this.decrementShape = Shape.fromKM(p, m);
+        this.decrementShape = p==0 ? null : Shape.fromKM(p, m);
         this.fps = fps;
         this.stablePoint = Math.pow(1.0 / (1 + (1.0 / (p * ((1.0 / k) - (1.0 / m))))), max);
         this.expectedCardinality = (int) Math.ceil((1.0 - stablePoint) * m);
@@ -53,7 +53,7 @@ public class StableShape extends CellShape {
         return String.format(
                 "StableShape[k=%s m=%s fps=%s stable point=%s expected cardinality=%s decrement count=%s reset value=%s]",
                 getNumberOfHashFunctions(), numberOfCells(), fps, stablePoint, expectedCardinality,
-                decrementShape.getNumberOfHashFunctions(), resetValue());
+                decrementShape==null?0:decrementShape.getNumberOfHashFunctions(), resetValue());
     }
 
 
@@ -85,7 +85,7 @@ public class StableShape extends CellShape {
         // number of bits
         private int m = UNSET;;
         // number of cells to decrement
-        private int p = UNSET;
+        private int p = -1;
         // value to reset to
         private int max = 2;
 
@@ -128,6 +128,7 @@ public class StableShape extends CellShape {
 
         /**
          * Sets the number of cells to decrement on each insertion.
+         * <p>If set to zero no decrements will be made.  Must be between [0, {@code numberOfBits}]
          * @param p the number of cells to decrement on each insertion.
          * @return this for chaining.
          */
@@ -177,15 +178,15 @@ public class StableShape extends CellShape {
             if (fps <= UNSET) {
                 fps = 1 / Math.pow(2, k);
             }
-            if (p <= UNSET) {
-                double oneOverK = 1.0 / k;
-                double leftDenom = 1.0 / Math.pow(1 - Math.pow(fps, oneOverK), (1.0 / max)) - 1;
+            double oneOverK = 1.0 / k;
+            double leftDenom = 1.0 / Math.pow(1 - Math.pow(fps, oneOverK), (1.0 / max)) - 1;
+            if (p < 0) {
                 double rightDenom = oneOverK - 1.0 / m;
                 p = (int) Math.ceil(1.0 / (leftDenom * rightDenom));
-                if (p > m) {
-                    // adjustment for cases where K is "close to" M
-                    p = (int) Math.ceil(1.0 / (leftDenom * oneOverK));
-                }
+            }
+            if (p > m) {
+                // adjustment for cases where K is "close to" M
+                p = (int) Math.ceil(1.0 / (leftDenom * oneOverK));
             }
         }
 

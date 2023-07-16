@@ -86,6 +86,7 @@ public class LongArrayCellManagerTest {
         // decrement cell 1 and verify that values on either side to not change.
         CellShape shape = CellShape.fromMaxValue(testShape, evenReset);
         underTest = new LongArrayCellManager(shape);
+        underTest.cardinality = 34;
         underTest.buffer[0] = 0xffff_ffff_ffff_ffffL;
         underTest.buffer[1] = 5;
         assertEquals( 3, underTest.get(1));
@@ -96,18 +97,21 @@ public class LongArrayCellManagerTest {
         assertEquals( 2, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 34, underTest.cardinality() );
         
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_fff7L, underTest.buffer[0]);
         assertEquals( 1, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 34, underTest.cardinality() );
         
         assertTrue(underTest.decrement(1,1));
         assertEquals( 0, underTest.get(1));
         assertEquals(0xffff_ffff_ffff_fff3L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 33, underTest.cardinality() );
 
         // show decrement past 0 sets invalid.
         assertFalse(underTest.decrement(1,1));
@@ -122,6 +126,7 @@ public class LongArrayCellManagerTest {
         CellShape shape = CellShape.fromBitsPerCell(testShape, 2);
         underTest = new LongArrayCellManager(shape);
         underTest.buffer[1] = 5;
+        underTest.cardinality = 2;
         assertEquals( 0, underTest.get(1));
         assertTrue(underTest.isValid());
         
@@ -130,18 +135,21 @@ public class LongArrayCellManagerTest {
         assertEquals( 1, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 3, underTest.cardinality());
         
         assertTrue(underTest.increment(1,1));
         assertEquals(0x8L, underTest.buffer[0]);
         assertEquals(2, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 3, underTest.cardinality());
         
         assertTrue(underTest.increment(1,1));
         assertEquals( 3, underTest.get(1));
         assertEquals(0xcL, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals( 3, underTest.cardinality());
 
         // show increment past limit sets invalid.
         assertFalse(underTest.increment(1,1));
@@ -156,6 +164,7 @@ public class LongArrayCellManagerTest {
         underTest = new LongArrayCellManager(shape);
         underTest.buffer[0] = 0xffff_ffff_ffff_ffffL;
         underTest.buffer[1] = 5;
+        underTest.cardinality = 23;
         assertEquals( 7, underTest.get(1));
         assertTrue(underTest.isValid());
         
@@ -163,36 +172,43 @@ public class LongArrayCellManagerTest {
         assertEquals(0xffff_ffff_ffff_fff7L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffefL, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffe7L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffdfL, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffd7L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffcfL, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(23, underTest.cardinality());
 
         assertTrue(underTest.decrement(1,1));
         assertEquals(0xffff_ffff_ffff_ffc7L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(22, underTest.cardinality());
 
         // show decrement past 0 sets invalid
         assertFalse(underTest.decrement(1,1));
@@ -207,6 +223,7 @@ public class LongArrayCellManagerTest {
         CellShape shape = CellShape.fromMaxValue(testShape, oddReset);
         underTest = new LongArrayCellManager(shape);
         underTest.buffer[1] = 5;
+        underTest.cardinality = 2;
         assertEquals( 0, underTest.get(1));
         assertTrue(underTest.isValid());
         
@@ -215,24 +232,28 @@ public class LongArrayCellManagerTest {
         assertEquals( 1, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
         
         assertTrue(underTest.increment(1,1));
         assertEquals(0x10L, underTest.buffer[0]);
         assertEquals(2, underTest.get(1));
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
         
         assertTrue(underTest.increment(1,1));
         assertEquals( 3, underTest.get(1));
         assertEquals(0x18L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
 
         assertTrue(underTest.increment(1,1));
         assertEquals( 4, underTest.get(1));
         assertEquals(0x20L, underTest.buffer[0]);
         assertEquals(5, underTest.buffer[1]);
         assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
 
         // show increment past limit sets invalid.
         assertFalse(underTest.increment(1,1));
