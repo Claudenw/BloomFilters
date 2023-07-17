@@ -23,7 +23,7 @@ public class VariableCountingBloomFilter implements CountingBloomFilter {
     }
 
     @Override
-    public int maxValue() {
+    public int getMaxValue() {
         return cellManager.getCellShape().maxValue();
     }
 
