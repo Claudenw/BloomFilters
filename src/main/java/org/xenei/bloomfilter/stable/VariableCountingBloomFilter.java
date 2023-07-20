@@ -3,8 +3,8 @@ package org.xenei.bloomfilter.stable;
 import java.util.Objects;
 import java.util.function.LongPredicate;
 
-import org.apache.commons.collections4.bloomfilter.BitCountProducer;
 import org.apache.commons.collections4.bloomfilter.BitMap;
+import org.apache.commons.collections4.bloomfilter.CellProducer;
 import org.apache.commons.collections4.bloomfilter.CountingBloomFilter;
 import org.apache.commons.collections4.bloomfilter.IndexProducer;
 import org.apache.commons.collections4.bloomfilter.Shape;
@@ -23,7 +23,7 @@ public class VariableCountingBloomFilter implements CountingBloomFilter {
     }
 
     @Override
-    public int getMaxValue() {
+    public int getMaxCell() {
         return cellManager.getCellShape().maxValue();
     }
 
@@ -78,7 +78,7 @@ public class VariableCountingBloomFilter implements CountingBloomFilter {
     }
 
     @Override
-    public boolean forEachCount(BitCountConsumer consumer) {
+    public boolean forEachCell(CellConsumer consumer) {
         return cellManager.forEachCell(consumer);
     }
 
@@ -88,13 +88,13 @@ public class VariableCountingBloomFilter implements CountingBloomFilter {
     }
 
     @Override
-    public boolean add(BitCountProducer other) {
-        return other.forEachCount(cellManager::increment);
+    public boolean add(CellProducer other) {
+        return other.forEachCell(cellManager::increment);
     }
 
     @Override
-    public boolean subtract(BitCountProducer other) {
-        return other.forEachCount(cellManager::decrement);
+    public boolean subtract(CellProducer other) {
+        return other.forEachCell(cellManager::decrement);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class VariableCountingBloomFilter implements CountingBloomFilter {
     public boolean merge(final IndexProducer indexProducer) {
         Objects.requireNonNull(indexProducer, "indexProducer");
         try {
-            return add(BitCountProducer.from(indexProducer));
+            return add(CellProducer.from(indexProducer));
         } catch (final IndexOutOfBoundsException e) {
             throw new IllegalArgumentException(
                     String.format("Filter only accepts values in the [0,%d) range", getShape().getNumberOfBits()), e);

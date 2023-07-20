@@ -1,8 +1,10 @@
 package org.xenei.bloomfilter.stable;
 
+import org.apache.commons.collections4.bloomfilter.CellProducer;
+
 /**
  * Some Bloom filters use counters rather than bits. In this case each counter
- * is called a {@code cell}. This interface defiens the methods on cell
+ * is called a {@code cell}. This interface defines the methods on cell
  * managers.
  * <p>
  * Some definitions:

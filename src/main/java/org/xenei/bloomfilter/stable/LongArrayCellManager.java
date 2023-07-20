@@ -3,7 +3,6 @@ package org.xenei.bloomfilter.stable;
 import java.util.Arrays;
 import java.util.function.IntPredicate;
 
-import org.apache.commons.collections4.bloomfilter.BitCountProducer.BitCountConsumer;
 import org.apache.commons.collections4.bloomfilter.BitMap;
 
 public class LongArrayCellManager implements CellManager {
@@ -42,7 +41,7 @@ public class LongArrayCellManager implements CellManager {
 
     protected int getBlock(int idx) {
         if (idx < 0 || idx > shape.getShape().getNumberOfBits()) {
-            throw new IndexOutOfBoundsException(idx);
+            throw new IndexOutOfBoundsException( String.format( "%s not in the range [0,%s]", idx, shape.getShape().getNumberOfBits()));
         }
         return idx / cellsPerBlock;
     }
@@ -148,18 +147,18 @@ public class LongArrayCellManager implements CellManager {
         return new LongArrayCellManager(this.shape, Arrays.copyOf(buffer, buffer.length), invalid, cardinality);
     }
 
-    @Override
-    public boolean forEachCell(IntPredicate predicate) {
-        for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
-            if (!predicate.test(get(idx))) {
-                return false;
-            }
-        }
-        return true;
-    }
+//    @Override
+//    public boolean forEachCell(IntPredicate predicate) {
+//        for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
+//            if (!predicate.test(get(idx))) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
 
     @Override
-    public boolean forEachCell(BitCountConsumer consumer) {
+    public boolean forEachCell(CellConsumer consumer) {
         for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
             int val = get(idx);
             if (val != 0 && !consumer.test(idx, get(idx))) {
