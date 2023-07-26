@@ -263,6 +263,70 @@ public class LongArrayCellManagerTest {
     }
 
     @Test
+    public void safeDecrementTest() {
+        // decrement cell 1 and verify that values on either side to not change.
+        CellShape shape = CellShape.fromMaxValue(testShape, evenReset);
+        underTest = new LongArrayCellManager(shape);
+        underTest.cardinality = 34;
+        underTest.buffer[0] = 0xffff_ffff_ffff_ffffL;
+        underTest.buffer[1] = 5;
+        assertEquals(3, underTest.get(1));
+        assertTrue(underTest.isValid());
+
+        underTest.safeDecrement(1, 1);
+        assertEquals(0xffff_ffff_ffff_fffbL, underTest.buffer[0]);
+        assertEquals(2, underTest.get(1));
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(34, underTest.cardinality());
+
+        underTest.safeDecrement(1, 3);
+        assertEquals(0xffff_ffff_ffff_fff3L, underTest.buffer[0]);
+        assertEquals(0, underTest.get(1));
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(33, underTest.cardinality());
+
+        underTest.safeDecrement(1, 1);
+        assertEquals(0, underTest.get(1));
+        assertEquals(0xffff_ffff_ffff_fff3L, underTest.buffer[0]);
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(33, underTest.cardinality());
+    }
+
+    @Test
+    public void safeIincrementTest() {
+        // decrement cell 1 and verify that values on either side to not change.
+        CellShape shape = CellShape.fromBitsPerCell(testShape, 2);
+        underTest = new LongArrayCellManager(shape);
+        underTest.buffer[1] = 5;
+        underTest.cardinality = 2;
+        assertEquals(0, underTest.get(1));
+        assertTrue(underTest.isValid());
+
+        underTest.safeIncrement(1, 1);
+        assertEquals(0x04L, underTest.buffer[0]);
+        assertEquals(1, underTest.get(1));
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
+
+        underTest.safeIncrement(1, 3);
+        assertEquals(0xcL, underTest.buffer[0]);
+        assertEquals(3, underTest.get(1));
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
+
+        underTest.safeIncrement(1, 1);
+        assertEquals(3, underTest.get(1));
+        assertEquals(0xcL, underTest.buffer[0]);
+        assertEquals(5, underTest.buffer[1]);
+        assertTrue(underTest.isValid());
+        assertEquals(3, underTest.cardinality());
+    }
+    @Test
     public void getTest() {
         CellShape shape = CellShape.fromMaxValue(testShape, oddReset);
         underTest = new LongArrayCellManager(shape);
