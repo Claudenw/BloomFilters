@@ -2,6 +2,7 @@ package org.xenei.bloomfilter.stable;
 
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntPredicate;
 
 import org.apache.commons.collections4.bloomfilter.BitMap;
@@ -24,7 +25,7 @@ public class FastPseudoRandomInt implements Hasher {
     private volatile long count;
 
     public FastPseudoRandomInt() {
-        Random r = new Random();
+        Random r = ThreadLocalRandom.current();
         index = r.nextLong();
         increment = r.nextLong();
         count = 1;
