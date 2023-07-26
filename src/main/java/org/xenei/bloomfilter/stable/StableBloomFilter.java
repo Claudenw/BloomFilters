@@ -20,7 +20,6 @@ public class StableBloomFilter implements BloomFilter {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
     private final CellManager cellManager;
-    // private int cardinality;
 
     /**
      * Create a stable Bloom filter.
@@ -35,7 +34,6 @@ public class StableBloomFilter implements BloomFilter {
         this.shape = shape;
         this.idxFactory = new FastPseudoRandomInt();
         this.cellManager = buffer;
-        // this.cardinality = -1;
     }
 
     /**
@@ -60,7 +58,6 @@ public class StableBloomFilter implements BloomFilter {
     @Override
     public void clear() {
         cellManager.clear();
-        // cardinality = 0;
     }
 
     @Override
@@ -69,17 +66,25 @@ public class StableBloomFilter implements BloomFilter {
             return cellManager.isSet(x);
         });
     }
+    
+    @Override
+    public boolean contains(final BitMapProducer bitMapProducer) {
+        return cellManager.getBitmap().forEachBitMapPair(bitMapProducer, (x, y) -> (x & y) == y);
+    }
+    
+    @Override
+    public boolean contains(final BloomFilter bloomFilter) {
+        return (bloomFilter.characteristics() & BloomFilter.SPARSE) != 0 ? contains((IndexProducer) bloomFilter) : contains((BitMapProducer) bloomFilter);
+    }
 
     @Override
     public int cardinality() {
-//        int result = cardinality;
-//        if (result < 0) {
-//            int[] accumulator = {0};
-//            cellManager.forEachCell( c -> { if (c!=0) { accumulator[0]++;} return true;});
-//            cardinality = result = accumulator[0];
-//        }
-//        return result;
         return cellManager.cardinality();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return cellManager.isEmpty();
     }
 
     @Override
@@ -165,13 +170,12 @@ public class StableBloomFilter implements BloomFilter {
      */
     public BloomFilter flatten() {
         BloomFilter bf = new SimpleBloomFilter(this.shape.getShape());
-        bf.merge(this);
+        bf.merge(cellManager.getBitmap());
         return bf;
     }
 
     private void decrement() {
         if (shape.decrementShape != null) {
-//            cardinality = -1;
             idxFactory.indices(shape.decrementShape).forEachIndex(x -> {
                 cellManager.safeDecrement(x, 1);
                 return true;
