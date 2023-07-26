@@ -1,5 +1,6 @@
 package org.xenei.bloomfilter.stable;
 
+import org.apache.commons.collections4.bloomfilter.BitMapProducer;
 import org.apache.commons.collections4.bloomfilter.CellProducer;
 
 /**
@@ -66,7 +67,7 @@ public interface CellManager extends CellProducer {
     boolean increment(int entry, int value);
 
     /**
-     * Increment the value of the entry by the value or set the value to zero if it
+     * Increment the value of the entry by the value or set the value to max cell value if it
      * exceeds the max cell value.
      * 
      * @param entry the cell to decrement.
@@ -119,4 +120,16 @@ public interface CellManager extends CellProducer {
      */
     int cardinality();
 
+    /**
+     * Determines if all the bits are off. This is equivalent to
+     * {@code cardinality() == 0}.
+     * @return {@code true} if no cells are enabled, {@code false} otherwise.
+     */
+     boolean isEmpty();
+     
+     /**
+      * Retrieves the BitMapProducer representation of the cells.
+      * @return a BitMapProducer that produces the longs that represent the cell states.
+      */
+     BitMapProducer getBitmap();
 }

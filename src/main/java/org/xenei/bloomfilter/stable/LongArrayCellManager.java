@@ -1,9 +1,9 @@
 package org.xenei.bloomfilter.stable;
 
 import java.util.Arrays;
-import java.util.function.IntPredicate;
 
 import org.apache.commons.collections4.bloomfilter.BitMap;
+import org.apache.commons.collections4.bloomfilter.BitMapProducer;
 
 public class LongArrayCellManager implements CellManager {
 
@@ -20,6 +20,11 @@ public class LongArrayCellManager implements CellManager {
      * The buffer.
      */
     protected final long[] buffer;
+    
+    /**
+     * The bitmap representation of the buffer.
+     */
+    protected final long[] bitMap;
     /**
      * The valid flag.
      */
@@ -37,6 +42,7 @@ public class LongArrayCellManager implements CellManager {
         this.cardinality = cardinality;
         this.cellsPerBlock = shape.cellsPerBlock(Long.SIZE);
         this.buffer = buffer;
+        this.bitMap = new long[BitMap.numberOfBitMaps(shape.numberOfCells())];
     }
 
     protected int getBlock(int idx) {
@@ -84,9 +90,11 @@ public class LongArrayCellManager implements CellManager {
             long current = buffer[block] & offmask;
             if (current != 0 && value == 0) {
                 cardinality--;
+                bitMap[BitMap.getLongIndex(idx)] &= ~BitMap.getLongBit(idx);
             }
             if (current == 0 && value != 0) {
                 cardinality++;
+                bitMap[BitMap.getLongIndex(idx)] |= BitMap.getLongBit(idx);
             }
             buffer[block] = (buffer[block] & ~offmask) | getMask(idx, (int) value);
         }
@@ -105,9 +113,9 @@ public class LongArrayCellManager implements CellManager {
     @Override
     public void safeIncrement(int idx, int value) {
         long val = getLong(idx);
-        if (val != shape.cellMask()) {
+        if (val < shape.maxValue()) {
             val += value;
-            setLong(idx, valueInRange(val) ? 0 : val);
+            setLong(idx, valueInRange(val) ? val : shape.maxValue());
         }
     }
 
@@ -121,7 +129,7 @@ public class LongArrayCellManager implements CellManager {
         long val = getLong(idx);
         if (val != 0) {
             val -= value;
-            setLong(idx, valueInRange(val) ? 0 : val);
+            setLong(idx, valueInRange(val) ? val : 0 );
         }
     }
 
@@ -147,16 +155,6 @@ public class LongArrayCellManager implements CellManager {
         return new LongArrayCellManager(this.shape, Arrays.copyOf(buffer, buffer.length), invalid, cardinality);
     }
 
-//    @Override
-//    public boolean forEachCell(IntPredicate predicate) {
-//        for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
-//            if (!predicate.test(get(idx))) {
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
-
     @Override
     public boolean forEachCell(CellConsumer consumer) {
         for (int idx = 0; idx < shape.getShape().getNumberOfBits(); idx++) {
@@ -171,5 +169,14 @@ public class LongArrayCellManager implements CellManager {
     @Override
     public int cardinality() {
         return cardinality;
+    }
+    
+    public boolean isEmpty() {
+        return cardinality == 0;
+    }
+    
+    @Override
+    public BitMapProducer getBitmap() {
+        return BitMapProducer.fromBitMapArray(bitMap);
     }
 }
