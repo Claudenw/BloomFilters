@@ -7,6 +7,7 @@ import java.util.function.LongPredicate;
 import org.apache.commons.collections4.bloomfilter.BitMap;
 import org.apache.commons.collections4.bloomfilter.BitMapProducer;
 import org.apache.commons.collections4.bloomfilter.BloomFilter;
+import org.apache.commons.collections4.bloomfilter.CellProducer;
 import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.IndexProducer;
 import org.apache.commons.collections4.bloomfilter.Shape;
@@ -16,7 +17,7 @@ import org.apache.commons.collections4.bloomfilter.SimpleBloomFilter;
  * Based http://webdocs.cs.ualberta.ca/~drafiei/papers/DupDet06Sigmod.pdf
  *
  */
-public class StableBloomFilter implements BloomFilter {
+public class StableBloomFilter implements BloomFilter, CellProducer {
     private final StableShape shape;
     private final FastPseudoRandomInt idxFactory;
     private final CellManager cellManager;
@@ -238,5 +239,10 @@ public class StableBloomFilter implements BloomFilter {
             estimate = estimate < 0 ? 0 : estimate;
         }
         return estimate > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) estimate;
+    }
+
+    @Override
+    public boolean forEachCell(CellConsumer consumer) {
+        return cellManager.forEachCell(consumer);
     }
 }
