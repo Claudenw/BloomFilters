@@ -92,7 +92,8 @@ public class StableBloomFilter implements BloomFilter, CellProducer {
     public boolean merge(final IndexProducer indexProducer) {
         Objects.requireNonNull(indexProducer, "indexProducer");
         decrement();
-        return indexProducer.forEachIndex(x -> {
+        try {
+        return indexProducer.uniqueIndices().forEachIndex(x -> {
             if (x >= shape.numberOfCells() || x < 0) {
                 throw new IllegalArgumentException(
                         String.format("Filter only accepts values in the [0,%d) range", getShape().getNumberOfBits()));
@@ -100,6 +101,10 @@ public class StableBloomFilter implements BloomFilter, CellProducer {
             cellManager.set(x, shape.resetValue());
             return true;
         });
+        } catch (IndexOutOfBoundsException e) {
+            throw new IllegalArgumentException(
+                    String.format("Filter only accepts values in the [0,%d) range", getShape().getNumberOfBits()));
+        }
     }
 
     @Override
@@ -111,12 +116,6 @@ public class StableBloomFilter implements BloomFilter, CellProducer {
     @Override
     public boolean merge(final BloomFilter other) {
         return merge((IndexProducer) other);
-    }
-
-    @Override
-    public boolean merge(final Hasher hasher) {
-        Objects.requireNonNull(hasher, "hasher");
-        return merge(hasher.uniqueIndices(getShape()));
     }
 
     @Override
