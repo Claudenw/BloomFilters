@@ -244,4 +244,9 @@ public class StableBloomFilter implements BloomFilter, CellProducer {
     public boolean forEachCell(CellConsumer consumer) {
         return cellManager.forEachCell(consumer);
     }
+
+    @Override
+    public IndexProducer uniqueIndices() {
+        return this;
+    }
 }
