@@ -13,6 +13,8 @@ import org.apache.commons.collections4.bloomfilter.EnhancedDoubleHasher;
 import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.Shape;
 import org.apache.commons.collections4.bloomfilter.TestingHashers;
+import org.apache.commons.collections4.bloomfilter.SimpleBloomFilter;
+
 import org.junit.jupiter.api.Test;
 
 public class SegmentedBloomFilterTest {
@@ -57,16 +59,24 @@ public class SegmentedBloomFilterTest {
     }
 
     private SegmentedBloomFilter create(Shape keyShape, String name) {
-        return create(keyShape, name, name + "'s home", "'s DOB", "'s phone");
+        return create(keyShape, name, name + "'s home", name + "'s DOB", name + "'s phone");
     }
 
     private SegmentedBloomFilter create(Shape keyShape, String name, String address, String dob, String phone) {
 
         SegmentedBloomFilter filter = new SegmentedBloomFilter(keyShape, Keys.values().length);
-        filter.getSegment(Keys.Name.ordinal()).merge(HasherFactory.getHasher(name));
-        filter.getSegment(Keys.Address.ordinal()).merge(HasherFactory.getHasher(address));
-        filter.getSegment(Keys.DOB.ordinal()).merge(HasherFactory.getHasher(dob));
-        filter.getSegment(Keys.Phone.ordinal()).merge(HasherFactory.getHasher(phone));
+        if (name != null) {
+        filter.getSegment(Keys.Name.ordinal()).merge(getHasher(name));
+        }
+        if (address != null) {
+        filter.getSegment(Keys.Address.ordinal()).merge(getHasher(address));
+        }
+        if (dob != null) {
+        filter.getSegment(Keys.DOB.ordinal()).merge(getHasher(dob));
+        }
+        if (phone != null) {
+        filter.getSegment(Keys.Phone.ordinal()).merge(getHasher(phone));
+        }
         return filter;
     }
 
@@ -89,17 +99,73 @@ public class SegmentedBloomFilterTest {
         assertTrue(filter.contains(mary));
         assertTrue(filter.contains(bob));
 
-        BloomFilter invalid = create(keyShape, "joe", "marty's home", "joe's DOB", "joe's phone");
-        assertFalse(filter.contains(invalid));
+        BloomFilter falsePositive = create(keyShape, "joe", "marty's home", "joe's DOB", "joe's phone");
+        assertTrue(filter.contains(falsePositive));
+
+        BloomFilter negative = create(keyShape, "joe", "jacks's home", "joe's DOB", "joe's phone");
+        assertFalse(filter.contains(negative));
+
+        
+        BloomFilter target = create(keyShape, "joe", null, "joe's DOB", "joe's phone");
+        assertTrue(filter.contains(target));
     }
 
-    static class HasherFactory {
+    @Test
+    public void testCrossImplementationSegmentMatch() {
+        SegmentedBloomFilter filter = new SegmentedBloomFilter(keyShape, Keys.values().length);
 
-        public static Hasher getHasher(String value) {
-            long[] parts = MurmurHash3.hash128x64(value.getBytes(StandardCharsets.UTF_8));
-            return new EnhancedDoubleHasher(parts[0], parts[1]);
-        }
+        BloomFilter joe = create(keyShape, "joe");
+        BloomFilter marty = create(keyShape, "marty");
+        BloomFilter mary = create(keyShape, "mary");
+        BloomFilter bob = create(keyShape, "bob");
 
+        filter.merge(joe);
+        filter.merge(marty);
+        filter.merge(mary);
+        filter.merge(bob);
+        
+        BloomFilter standard = new SimpleBloomFilter(joe.getShape());
+        standard.merge(filter);
+
+        assertTrue(standard.contains(joe));
+        assertTrue(standard.contains(marty));
+        assertTrue(standard.contains(mary));
+        assertTrue(standard.contains(bob));
+
+        BloomFilter falsePositive = create(keyShape, "joe", "marty's home", "joe's DOB", "joe's phone");
+        assertTrue(standard.contains(falsePositive));
+        
+        BloomFilter negative = create(keyShape, "joe", "jacks's home", "joe's DOB", "joe's phone");
+        assertFalse(filter.contains(negative));
+
+        BloomFilter target = create(keyShape, "joe", null, "joe's DOB", "joe's phone");
+        assertTrue(standard.contains(target));
+
+        standard.clear();
+        standard.merge(joe);
+        standard.merge(marty);
+        standard.merge(mary);
+        standard.merge(bob);
+        
+        assertTrue(standard.contains(joe));
+        assertTrue(standard.contains(marty));
+        assertTrue(standard.contains(mary));
+        assertTrue(standard.contains(bob));
+
+        falsePositive = create(keyShape, "joe", "marty's home", "joe's DOB", "joe's phone");
+        assertTrue(standard.contains(falsePositive));
+
+        negative = create(keyShape, "joe", "jacks's home", "joe's DOB", "joe's phone");
+        assertFalse(filter.contains(negative));
+
+        target = create(keyShape, "joe", null, "joe's DOB", "joe's phone");
+        assertTrue(standard.contains(target));
+    }
+
+
+    static Hasher getHasher(String value) {
+        long[] parts = MurmurHash3.hash128x64(value.getBytes(StandardCharsets.UTF_8));
+        return new EnhancedDoubleHasher(parts[0], parts[1]);
     }
 
 }
